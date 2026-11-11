@@ -122,7 +122,7 @@ select,input.txt{padding:6px 8px;border:1px solid var(--line);border-radius:6px;
 .gsvg .cv{stroke:#000;stroke-width:1.8;fill:none}
 .gsvg .cv2{stroke:#888;stroke-width:1;fill:none}
 .gsvg .cvd{stroke:#000;stroke-width:1.4;fill:none;stroke-dasharray:4 3}
-.gsvg text{font-family:"Times New Roman",serif;font-size:12px;font-style:italic}
+.gsvg text{paint-order:stroke;stroke:#fff;stroke-width:3px;stroke-linejoin:round;font-family:"Times New Roman",serif;font-size:12px;font-style:italic}
 .gsvg text.up{font-style:normal}
 .gsvg text.tk{font-style:normal;font-size:10.5px}
 .gsvg .gr{stroke:#bbb;stroke-width:.5}
@@ -239,7 +239,7 @@ dialog::backdrop{background:rgba(0,0,0,.35)}
 </dialog>
 <script>
 'use strict';
-const VERSION='0.8.1';
+const VERSION='0.8.2';
 const PUBLIC_URL='https://sdanno75-spec.github.io/graph/';
 const KANA='アイウエオカキクケコサシスセソタチツテトナニヌネノハヒフヘホマミムメモ';
 const CIR='⓪①②③④⑤⑥⑦⑧⑨';
@@ -510,7 +510,7 @@ function drawCurve(co,color,width,dash){
 }
 function dot(x,y,color,r=5,label,lpos){
   const px=SX(x),py=SY(y);ctx.save();ctx.fillStyle=color;ctx.beginPath();ctx.arc(px,py,r,0,7);ctx.fill();
-  if(label){ctx.font='13px "Hiragino Kaku Gothic ProN","Yu Gothic UI",sans-serif';ctx.fillStyle=color;ctx.textAlign='left';ctx.fillText(label,px+(lpos?lpos[0]:7),py+(lpos?lpos[1]:-7))}
+  if(label){ctx.font='13px "Hiragino Kaku Gothic ProN","Yu Gothic UI",sans-serif';ctx.fillStyle=color;ctx.textAlign='left';htxt(label,px+(lpos?lpos[0]:7),py+(lpos?lpos[1]:-7))}
   ctx.restore();
 }
 function draw(){
@@ -527,10 +527,10 @@ function draw(){
   ctx.strokeStyle='#333';ctx.lineWidth=1.2;ctx.beginPath();ctx.moveTo(0,SY(0));ctx.lineTo(G.W,SY(0));ctx.moveTo(SX(0),0);ctx.lineTo(SX(0),G.H);ctx.stroke();
   ctx.fillStyle='#555';ctx.font='11px sans-serif';ctx.textAlign='center';
   const lab=(u*G.sc<36)?u*2:u;
-  if(isTrig()){const lx=(ux*G.sc<44)?ux*2:ux;for(let x=Math.ceil(x0/lx)*lx;x<=x1;x+=lx){if(Math.abs(x)<1e-9)continue;ctx.fillText(piTxt(x/PI),SX(x),Math.min(G.H-4,Math.max(12,SY(0)+14)))}}
-  else for(let x=Math.ceil(x0/lab)*lab;x<=x1;x+=lab){if(Math.abs(x)<1e-9)continue;ctx.fillText(fxm(x),SX(x),Math.min(G.H-4,Math.max(12,SY(0)+14)))}
+  if(isTrig()){const lx=(ux*G.sc<44)?ux*2:ux;for(let x=Math.ceil(x0/lx)*lx;x<=x1;x+=lx){if(Math.abs(x)<1e-9)continue;htxt(piTxt(x/PI),SX(x),Math.min(G.H-4,Math.max(12,SY(0)+14)))}}
+  else for(let x=Math.ceil(x0/lab)*lab;x<=x1;x+=lab){if(Math.abs(x)<1e-9)continue;htxt(fxm(x),SX(x),Math.min(G.H-4,Math.max(12,SY(0)+14)))}
   ctx.textAlign='right';
-  for(let y=Math.ceil(y0/lab)*lab;y<=y1;y+=lab){if(Math.abs(y)<1e-9)continue;ctx.fillText(fxm(y),Math.min(G.W-4,Math.max(26,SX(0)-5)),SY(y)+4)}
+  for(let y=Math.ceil(y0/lab)*lab;y<=y1;y+=lab){if(Math.abs(y)<1e-9)continue;htxt(fxm(y),Math.min(G.W-4,Math.max(26,SX(0)-5)),SY(y)+4)}
   ctx.font='italic 14px "Times New Roman",serif';ctx.fillStyle='#333';ctx.textAlign='left';ctx.fillText('x',G.W-14,SY(0)-6);ctx.fillText('y',SX(0)+6,13);ctx.fillText('O',SX(0)-14,SY(0)+15);
   // mission target
   if(mode==='mis'&&mis)drawCurve(mis.target,'#d9480f',2.2,[8,6]);
@@ -1021,6 +1021,7 @@ function repVals(R,cat){for(let i=0;i<400;i++){const a=pick(R,[0.5,1,2,-0.5,-1,-
 let svgN=0;
 function keyPts(a,b,c){const v=vertexOf({a,b,c});const r=[[v.x,v.y],[0,c]];for(const x of solve(a,b,c))r.push([x,0]);const H=Math.max(2.5,Math.abs(v.y)*0.9,Math.abs(c-v.y)*0.8);const d=Math.sqrt(H/Math.abs(a));r.push([v.x-d,v.y+Math.sign(a)*H],[v.x+d,v.y+Math.sign(a)*H]);return r}
 function fitView(pts,pad=0.18){const xs=pts.map(p=>p[0]).concat(0),ys=pts.map(p=>p[1]).concat(0);let x0=Math.min(...xs),x1=Math.max(...xs),y0=Math.min(...ys),y1=Math.max(...ys);const dx=Math.max(x1-x0,2),dy=Math.max(y1-y0,2);return[x0-dx*pad,x1+dx*pad,y0-dy*pad,y1+dy*pad]}
+function htxt(s,x,y){ctx.save();ctx.strokeStyle='#fff';ctx.lineWidth=3;ctx.lineJoin='round';ctx.strokeText(s,x,y);ctx.restore();ctx.fillText(s,x,y)}
 function graphSVG(o){
   const w=o.w||220,h=o.h||170,[x0,x1,y0,y1]=o.v,sx=x=>(x-x0)/(x1-x0)*w,sy=y=>h-(y-y0)/(y1-y0)*h,id='cl'+(++svgN);
   let s=`<svg viewBox="0 0 ${w} ${h}" width="${w}" height="${h}" class="gsvg"><defs><clipPath id="${id}"><rect x="0" y="0" width="${w}" height="${h}"/></clipPath></defs>`;
@@ -1031,12 +1032,20 @@ function graphSVG(o){
   for(const y of (o.hl||[]))s+=`<line x1="0" y1="${sy(y)}" x2="${w}" y2="${sy(y)}" class="gd"/>`;
   for(const x of (o.vl||[]))s+=`<line x1="${sx(x)}" y1="0" x2="${sx(x)}" y2="${h}" class="gd"/>`;
   for(const x of (o.xtick||[]))s+=`<line x1="${sx(x)}" y1="${oy-2.5}" x2="${sx(x)}" y2="${oy+2.5}" class="ax"/>`;
-  for(const t of (o.xt||[]))s+=`<line x1="${sx(t.x)}" y1="${oy-3.5}" x2="${sx(t.x)}" y2="${oy+3.5}" class="ax"/><text class="tk" x="${sx(t.x)}" y="${oy+(t.up?-6:13)}" text-anchor="middle">${t.lab}</text>`;
-  for(const t of (o.yt||[]))s+=`<text class="tk" x="${ox-4}" y="${sy(t.y)+4}" text-anchor="end">${t.lab}</text>`;
-  for(const cu of (o.curves||[])){const[a,b,c]=cu.co||[0,0,0];let d='';const N=cu.f?400:160;for(let i=0;i<=N;i++){const x=x0+(x1-x0)*i/N,y=cu.f?cu.f(x):a*x*x+b*x+c;const Y=Math.max(-50,Math.min(h+50,sy(y)));d+=(i?'L':'M')+sx(x).toFixed(1)+' '+Y.toFixed(1)}s+=`<path d="${d}" class="${cu.cls||'cv'}" clip-path="url(#${id})"/>`}
-  for(const pl of (o.paths||[])){let d='';let first=true;for(const[x,y]of pl){const X=sx(x),Y=sy(y);if(Math.abs(X)>3000||Math.abs(Y)>3000){first=true;continue}d+=(first?'M':'L')+X.toFixed(1)+' '+Y.toFixed(1);first=false}s+=`<path d="${d}" class="${pl.cls||'cv'}" clip-path="url(#${id})"/>`}
-  for(const L of (o.lines||[])){s+=`<line x1="${sx(L[0])}" y1="${sy(L[1])}" x2="${sx(L[2])}" y2="${sy(L[3])}" class="cvd" clip-path="url(#${id})"/>`}
-  for(const p of (o.pts||[])){s+=`<circle cx="${sx(p.x)}" cy="${sy(p.y)}" r="2.6"/>`;if(p.lab)s+=`<text class="up" x="${sx(p.x)+(p.dx||4)}" y="${sy(p.y)+(p.dy||-4)}">${p.lab}</text>`}
+  for(const t of (o.xt||[]))s+=`<line x1="${sx(t.x)}" y1="${oy-3.5}" x2="${sx(t.x)}" y2="${oy+3.5}" class="ax"/>`;
+  const cp=[];
+  for(const cu of (o.curves||[])){const[a,b,c]=cu.co||[0,0,0];let d='';const N=cu.f?400:160;for(let i=0;i<=N;i++){const x=x0+(x1-x0)*i/N,y=cu.f?cu.f(x):a*x*x+b*x+c;const Y=Math.max(-50,Math.min(h+50,sy(y)));d+=(i?'L':'M')+sx(x).toFixed(1)+' '+Y.toFixed(1);if(isFinite(Y))cp.push([sx(x),Y])}s+=`<path d="${d}" class="${cu.cls||'cv'}" clip-path="url(#${id})"/>`}
+  for(const pl of (o.paths||[])){let d='';let first=true;for(const[x,y]of pl){const X=sx(x),Y=sy(y);if(Math.abs(X)>3000||Math.abs(Y)>3000){first=true;continue}d+=(first?'M':'L')+X.toFixed(1)+' '+Y.toFixed(1);first=false;cp.push([X,Y])}s+=`<path d="${d}" class="${pl.cls||'cv'}" clip-path="url(#${id})"/>`}
+  for(const L of (o.lines||[])){s+=`<line x1="${sx(L[0])}" y1="${sy(L[1])}" x2="${sx(L[2])}" y2="${sy(L[3])}" class="cvd" clip-path="url(#${id})"/>`;for(let i=0;i<=40;i++)cp.push([sx(L[0]+(L[2]-L[0])*i/40),sy(L[1]+(L[3]-L[1])*i/40)])}
+  /* 文字の重なり回避：候補位置のうち曲線・他の文字と重ならない所を選ぶ */
+  const boxes=[];const tw=(lab,fs)=>String(lab).replace(/<[^>]*>/g,'').length*fs*0.62+2;
+  const hits=(bx)=>{let n=0;for(const[X,Y]of cp)if(X>bx[0]-1&&X<bx[2]+1&&Y>bx[1]-1&&Y<bx[3]+1)n++;for(const q of boxes)if(bx[0]<q[2]&&bx[2]>q[0]&&bx[1]<q[3]&&bx[3]>q[1])n+=50;if(bx[0]<0||bx[2]>w||bx[1]<0||bx[3]>h)n+=30;return n};
+  const place=(cands,lab,fs,cls,anc)=>{let best=null,bs=1e9;cands.forEach((c,i)=>{const W=tw(lab,fs);const L=anc==='middle'?c[0]-W/2:anc==='end'?c[0]-W:c[0];const bx=[L,c[1]-fs*0.8,L+W,c[1]+fs*0.2];const sc=hits(bx)*10+i;if(sc<bs){bs=sc;best=[c,bx]}});boxes.push(best[1]);return `<text class="${cls}" x="${best[0][0].toFixed(1)}" y="${best[0][1].toFixed(1)}" text-anchor="${anc}">${lab}</text>`};
+  boxes.push([ox-13,oy+3,ox-2,oy+15]);
+  for(const p of (o.pts||[]))boxes.push([sx(p.x)-3,sy(p.y)-3,sx(p.x)+3,sy(p.y)+3]);
+  for(const t of (o.xt||[])){const X=sx(t.x);s+=place(t.up?[[X,oy-6],[X,oy+13]]:[[X,oy+13],[X,oy-6]],t.lab,10.5,'tk','middle')}
+  for(const t of (o.yt||[])){const Y=sy(t.y);s+=place([[ox-4,Y+4],[ox+4,Y+4]],t.lab,10.5,'tk',ox-4<12?'start':'end')}
+  for(const p of (o.pts||[])){s+=`<circle cx="${sx(p.x)}" cy="${sy(p.y)}" r="2.6"/>`;if(p.lab){const X=sx(p.x),Y=sy(p.y),d0=[X+(p.dx||4),Y+(p.dy||-4)];s+=place([d0,[X+4,Y-4],[X-4-tw(p.lab,12),Y-4],[X+4,Y+13],[X-4-tw(p.lab,12),Y+13],[X-tw(p.lab,12)/2,Y-7],[X-tw(p.lab,12)/2,Y+16],[X+6,Y+4],[X-6-tw(p.lab,12),Y+4]],p.lab,12,'up','start')}}
   return s+'</svg>';
 }
 function softFig(kind,rows,g){
