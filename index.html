@@ -152,7 +152,7 @@ dialog::backdrop{background:rgba(0,0,0,.35)}
   <div class="tabs" id="fnTabs">
     <button class="tab on" data-fn="quad">2次関数</button>
     <button class="tab" data-fn="trig">三角関数</button>
-    <button class="tab" disabled title="準備中">指数・対数</button>
+    <button class="tab" data-fn="expo">指数・対数</button>
     <button class="tab" disabled title="準備中">3次関数</button>
     <button class="tab" disabled title="準備中">二次曲線</button>
   </div>
@@ -236,7 +236,7 @@ dialog::backdrop{background:rgba(0,0,0,.35)}
 </dialog>
 <script>
 'use strict';
-const VERSION='0.4.0';
+const VERSION='0.5.0';
 const PUBLIC_URL='https://sdanno75-spec.github.io/graph/';
 const KANA='アイウエオカキクケコサシスセソタチツテトナニヌネノハヒフヘホマミムメモ';
 const CIR='⓪①②③④⑤⑥⑦⑧⑨';
@@ -264,13 +264,19 @@ const P={form:'v',v:{a:1,p:0,q:0},g:{a:1,b:0,c:0},t:{ax:-1,ay:0,bx:0,by:-1,cx:1,
 const KEYS={v:['a','p','q'],g:['a','b','c'],t:['ax','ay','bx','by','cx','cy'],s:['ta','tb','tp','tq'],e:['ta','tb','tc','tq']};
 const LBL={a:'$a$',p:'$p$',q:'$q$',b:'$b$',c:'$c$',ax:'A の $x$',ay:'A の $y$',bx:'B の $x$',by:'B の $y$',cx:'C の $x$',cy:'C の $y$',ta:'$a$',tb:'$b$',tp:'$p$',tq:'$q$',tc:'$c$'};
 const RANGE={a:[-5,5],p:[-10,10],q:[-10,10],b:[-10,10],c:[-10,10],ax:[-10,10],ay:[-10,10],bx:[-10,10],by:[-10,10],cx:[-10,10],cy:[-10,10],ta:[-3,3],tb:[-4,4],tp:[-2,2],tc:[-4,4],tq:[-3,3]};
-const ANG={tp:1,tc:1};/* stored in units of pi */
-const FORMS={quad:[['v','a(x−p)²+q'],['g','ax²+bx+c'],['t','3点を通る']],trig:[['s','a sin b(x−p)+q'],['e','a sin(bx+c)+q']]};
+const ANG={tp:1,tc:1};const BASEK={xa:1,la:1};/* stored in units of pi */
+const FORMS={quad:[['v','a(x−p)²+q'],['g','ax²+bx+c'],['t','3点を通る']],trig:[['s','a sin b(x−p)+q'],['e','a sin(bx+c)+q']],expo:[['x','k·aˣ⁻ᵖ+q'],['l','k·logₐ(x−p)+q']]};
+P.x={xa:2,xk:1,xp:0,xq:0};P.l={la:2,lk:1,lp:0,lq:0};KEYS.x=['xa','xk','xp','xq'];KEYS.l=['la','lk','lp','lq'];
+Object.assign(LBL,{xa:'底 $a$',xk:'$k$',xp:'$p$',xq:'$q$',la:'底 $a$',lk:'$k$',lp:'$p$',lq:'$q$'});
+Object.assign(RANGE,{xa:[0.05,5],la:[0.05,5],xk:[-3,3],lk:[-3,3],xp:[-5,5],lp:[-5,5],xq:[-5,5],lq:[-5,5]});
+function fracTxt(v){for(const d of[1,2,3,4,5,6,8,10]){const n=v*d;if(Math.abs(n-Math.round(n))<1e-6)return d===1?String(Math.round(n)):Math.round(n)+'/'+d}return fx(v)}
+function fracTex(v){for(const d of[1,2,3,4,5,6,8,10]){const n=v*d;if(Math.abs(n-Math.round(n))<1e-6){const m=Math.round(n);return d===1?String(m):(m<0?'-':'')+'\\frac{'+Math.abs(m)+'}{'+d+'}'}}return fx(v)}
+function parseFrac(t){t=String(t).replace(/\s/g,'').replace(/−/g,'-');const m=/^([-+]?\d*\.?\d+)(?:\/(\d*\.?\d+))?$/.exec(t);if(!m)return NaN;return +m[1]/(m[2]?+m[2]:1)}
 let FN='quad';
 const O={ghost:true,trail:false,pos:false,k:false,dom:false,base:false,kv:0,dt:-1,dw:3};
 let STEP=0.1,lock={},ghost=null,trail=[],stateX=null,mode='obs';
-const stepOf=k=>ANG[k]?1/12:STEP;
-const isTrig=()=>FN==='trig';
+const stepOf=k=>ANG[k]?1/12:BASEK[k]?0.05:STEP;
+const isTrig=()=>FN==='trig';const isExpo=()=>FN==='expo';
 /* pi fractions (value r means r*pi) */
 function piParts(r){for(const d of[1,2,3,4,6,8,12,24]){const n=r*d;if(Math.abs(n-Math.round(n))<1e-6)return{n:Math.round(n),d}}return null}
 function piTex(r){if(Math.abs(r)<1e-9)return '0';const f=piParts(r);if(!f)return fx(r)+'\\pi';const s=f.n<0?'-':'';const n=Math.abs(f.n);const num=n===1?'\\pi':n+'\\pi';return s+(f.d===1?num:`\\frac{${num}}{${f.d}}`)}
@@ -289,7 +295,10 @@ function fromPts(t){
   return{a,b,c};
 }
 function trigOf(fn,a,b,pr,q){return{trig:true,fn,a,b,pr,p:pr*PI,q}}
+function expOf(kind,a,k,p,q){if(Math.abs(a-1)<1e-9||a<=0)return{ex:true,kind,a,k,p,q,err:'底 a は 1 以外の正の数にしてください'};return{ex:true,kind,a,k,p,q}}
 function coefOf(form,vals,fn){
+  if(form==='x')return expOf('exp',vals.xa,vals.xk,vals.xp,vals.xq);
+  if(form==='l')return expOf('log',vals.la,vals.lk,vals.lp,vals.lq);
   if(form==='s')return trigOf(fn||P.fn,vals.ta,vals.tb,vals.tp,vals.tq);
   if(form==='e'){const b=vals.tb;return trigOf(fn||P.fn,vals.ta,b,Math.abs(b)<1e-12?0:-vals.tc/b,vals.tq)}
   if(form==='v'){const{a,p,q}=vals;return{a,b:-2*a*p,c:a*p*p+q}}
@@ -297,16 +306,19 @@ function coefOf(form,vals,fn){
   return fromPts(vals);
 }
 function coef(){return coefOf(P.form,P[P.form])}
-function vertexOf(co){if(!co||co.err||co.trig||Math.abs(co.a)<1e-12)return null;return{x:-co.b/(2*co.a),y:co.c-co.b*co.b/(4*co.a)}}
+function vertexOf(co){if(!co||co.err||co.trig||co.ex||Math.abs(co.a)<1e-12)return null;return{x:-co.b/(2*co.a),y:co.c-co.b*co.b/(4*co.a)}}
 /* trig: reference point (start of one period) and quarter/half handle */
 function trigRef(co){return{x:co.p,y:co.fn==='cos'?co.q+co.a:co.q}}
 function trigHandle(co){if(Math.abs(co.b)<1e-12)return null;const T=2*PI/Math.abs(co.b);const x=co.p+(co.fn==='cos'?T/2:T/4);return{x,y:fval(co,x)}}
-function keyPt(co){return co.trig?trigRef(co):vertexOf(co)}
+function exRef(co){return co.kind==='exp'?{x:co.p,y:co.k+co.q}:{x:co.p+1,y:co.q}}
+function exHandle(co){return co.kind==='exp'?{x:co.p+1,y:co.k*co.a+co.q}:{x:co.p+co.a,y:co.k+co.q}}
+function keyPt(co){return co.ex?exRef(co):co.trig?trigRef(co):vertexOf(co)}
 function firstMax(co){/* first local max with x>0 */
   if(co.trig){if(Math.abs(co.b)<1e-12||Math.abs(co.a)<1e-12)return null;const T=2*PI/Math.abs(co.b);const base=co.fn==='cos'?0:PI/2;const th=co.a>0?base:base+PI;/* b(x-p)=th+2n pi */
     let x=co.p+th/co.b;x=x-Math.floor((x-1e-6)/T)*T;if(x<=1e-6)x+=T;return{x,y:fval(co,x)}}
   return vertexOf(co)}
 function setForm(f,convert=true){
+  if(convert&&f!==P.form&&(f==='x'||f==='l')){const s0=P[P.form];if(f==='l'&&P.form==='x')P.l={la:s0.xa,lk:s0.xk,lp:s0.xp,lq:s0.xq};if(f==='x'&&P.form==='l')P.x={xa:s0.la,xk:s0.lk,xp:s0.lp,xq:s0.lq};convert=false}
   if(convert&&f!==P.form&&(f==='s'||f==='e')){
     if(f==='e'){const s=P.s;P.e={ta:s.ta,tb:s.tb,tc:rnd(-s.tb*s.tp,1e6),tq:s.tq}}
     else{const e=P.e;P.s={ta:e.ta,tb:e.tb,tp:Math.abs(e.tb)<1e-12?0:rnd(-e.tc/e.tb,1e6),tq:e.tq}}
@@ -333,7 +345,7 @@ function buildParams(){
   const box=$('#params');let h='';
   for(const k of KEYS[P.form]){
     const [lo,hi]=RANGE[k];const sp=stepOf(k);
-    const inp=ANG[k]?`<input type="text" class="angin" id="n_${k}" style="width:84px;padding:5px 6px;border:1.5px solid #555;border-radius:2px;font-size:15px;text-align:right;font-family:inherit">`:`<input type="number" id="n_${k}" step="${sp}">`;
+    const inp=(ANG[k]||BASEK[k])?`<input type="text" class="angin" id="n_${k}" style="width:84px;padding:5px 6px;border:1.5px solid #555;border-radius:2px;font-size:15px;text-align:right;font-family:inherit">`:`<input type="number" id="n_${k}" step="${sp}">`;
     h+=`<div class="prow" id="row_${k}"><div class="ptop"><span class="lab">${T(LBL[k])}</span>${inp}<label><input type="checkbox" id="l_${k}">固定</label></div><input type="range" id="r_${k}" min="${lo}" max="${hi}" step="${sp}"></div>`;
   }
   box.innerHTML=h;
@@ -342,7 +354,7 @@ function buildParams(){
     r.addEventListener('pointerdown',()=>{markGhost()});
     r.addEventListener('keydown',()=>{markGhost()});
     r.addEventListener('input',()=>{setVal(k,+r.value)});
-    n.addEventListener('change',()=>{if(n.value==='')return;const v=ANG[k]?parsePi(n.value):+n.value;if(!isFinite(v)){syncInputs();return}markGhost();setVal(k,v)});
+    n.addEventListener('change',()=>{if(n.value==='')return;const v=ANG[k]?parsePi(n.value):BASEK[k]?parseFrac(n.value):+n.value;if(!isFinite(v)){syncInputs();return}markGhost();setVal(k,v)});
     l.addEventListener('change',()=>{lock[k]=l.checked;syncInputs()});
   }
   syncInputs();
@@ -351,7 +363,7 @@ function syncInputs(){
   const disabled=(mode==='pred'&&pred&&!pred.done);
   for(const k of KEYS[P.form]){
     const v=P[P.form][k];const n=$('#n_'+k),r=$('#r_'+k);if(!n)continue;
-    n.value=ANG[k]?piTxt(v):rnd(v);r.value=v;const lk=!!lock[k]||disabled;n.disabled=lk;r.disabled=lk;
+    n.value=ANG[k]?piTxt(v):BASEK[k]?fracTxt(v):rnd(v);r.value=v;const lk=!!lock[k]||disabled;n.disabled=lk;r.disabled=lk;
     $('#row_'+k).classList.toggle('locked',lk);if(!ANG[k])n.step=STEP;r.step=stepOf(k);
   }
 }
@@ -373,10 +385,10 @@ const G={cx:0,cy:0,sc:40,W:600,H:400};
 const SX=x=>G.W/2+(x-G.cx)*G.sc,SY=y=>G.H/2-(y-G.cy)*G.sc,IX=px=>(px-G.W/2)/G.sc+G.cx,IY=py=>-(py-G.H/2)/G.sc+G.cy;
 function resize(){const r=cv.parentElement.getBoundingClientRect();const d=window.devicePixelRatio||1;G.W=r.width;G.H=r.height;cv.width=Math.round(r.width*d);cv.height=Math.round(r.height*d);ctx.setTransform(d,0,0,d,0,0);draw()}
 function niceStep(){const c=[0.5,1,2,5,10,20];for(const u of c)if(u*G.sc>=26)return u;return 50}
-function fval(co,x){return co.trig?co.a*TF(co.fn,co.b*(x-co.p))+co.q:co.a*x*x+co.b*x+co.c}
+function fval(co,x){if(co.ex){if(co.kind==='exp')return co.k*Math.pow(co.a,x-co.p)+co.q;return x>co.p?co.k*Math.log(x-co.p)/Math.log(co.a)+co.q:NaN}return co.trig?co.a*TF(co.fn,co.b*(x-co.p))+co.q:co.a*x*x+co.b*x+co.c}
 /* roots of f(x)=k in [lo,hi) */
 function rootsK(co,k,lo,hi){
-  if(!co.trig)return solve(co.a,co.b,co.c-k).filter(x=>x>=lo-1e-9&&x<hi-1e-9);
+  if(!co.trig&&!co.ex)return solve(co.a,co.b,co.c-k).filter(x=>x>=lo-1e-9&&x<hi-1e-9);
   const N=4000,h=(hi-lo)/N,out=[];let px=lo,pv=fval(co,lo)-k;
   if(Math.abs(pv)<1e-9)out.push(lo);
   for(let i=1;i<=N;i++){const x=lo+i*h,v=fval(co,x)-k;
@@ -390,7 +402,8 @@ function rootsK(co,k,lo,hi){
 }
 function drawCurve(co,color,width,dash){
   if(!co||co.err)return;ctx.save();ctx.strokeStyle=color;ctx.lineWidth=width;ctx.setLineDash(dash||[]);ctx.beginPath();
-  let first=true;for(let px=-2;px<=G.W+2;px+=(co.trig?1:2)){const x=IX(px),y=fval(co,x),py=SY(y);if(py<-2000||py>G.H+2000){first=true;continue}if(first){ctx.moveTo(px,py);first=false}else ctx.lineTo(px,py)}
+  if(co.ex&&co.kind==='log'){const x1=IX(G.W+2);if(x1>co.p){let started=false;for(let t=-7;t<=Math.log10(x1-co.p)+1e-9;t+=0.01){const x=co.p+Math.pow(10,t);if(x<IX(-2))continue;const py=SY(fval(co,x));if(!isFinite(py)||py<-2000||py>G.H+2000)continue;if(!started){ctx.moveTo(SX(x),py);started=true}else ctx.lineTo(SX(x),py)}}ctx.stroke();ctx.restore();return}
+  let first=true;for(let px=-2;px<=G.W+2;px+=(co.trig?1:2)){const x=IX(px),y=fval(co,x),py=SY(y);if(!isFinite(py)||py<-2000||py>G.H+2000){first=true;continue}if(first){ctx.moveTo(px,py);first=false}else ctx.lineTo(px,py)}
   ctx.stroke();ctx.restore();
 }
 function dot(x,y,color,r=5,label,lpos){
@@ -419,6 +432,8 @@ function draw(){
   ctx.font='italic 14px "Times New Roman",serif';ctx.fillStyle='#333';ctx.textAlign='left';ctx.fillText('x',G.W-14,SY(0)-6);ctx.fillText('y',SX(0)+6,13);ctx.fillText('O',SX(0)-14,SY(0)+15);
   // mission target
   if(mode==='mis'&&mis)drawCurve(mis.target,'#d9480f',2.2,[8,6]);
+  if(isExpo()){const co0=coef();if(!co0.err){ctx.save();ctx.strokeStyle='#c2255c';ctx.lineWidth=1.2;ctx.setLineDash([6,5]);ctx.beginPath();if(co0.kind==='exp'){ctx.moveTo(0,SY(co0.q));ctx.lineTo(G.W,SY(co0.q))}else{ctx.moveTo(SX(co0.p),0);ctx.lineTo(SX(co0.p),G.H)}ctx.stroke();ctx.restore()}
+    if(O.base&&!co0.err){const a=co0.a;drawCurve(expOf('exp',a,1,0,0),'#e8a33d',1.6,[6,4]);drawCurve(expOf('log',a,1,0,0),'#2b8a3e',1.6,[6,4]);ctx.save();ctx.strokeStyle='#999';ctx.setLineDash([2,4]);ctx.beginPath();ctx.moveTo(SX(-50),SY(-50));ctx.lineTo(SX(50),SY(50));ctx.stroke();ctx.restore()}}
   if(isTrig()&&O.base)drawCurve(trigOf(P.fn,1,1,0,0),'#e8a33d',1.6,[6,4]);
   if(O.ghost&&ghost)drawCurve(ghost,'#a3adbd',2,[]);
   if(trail.length>1){ctx.save();ctx.strokeStyle='#d9480f';ctx.lineWidth=1.6;ctx.setLineDash([3,4]);ctx.beginPath();trail.forEach((p,i)=>{i?ctx.lineTo(SX(p.x),SY(p.y)):ctx.moveTo(SX(p.x),SY(p.y))});ctx.stroke();ctx.restore()}
@@ -432,6 +447,7 @@ function draw(){
   if(!co.err){
     const v=vertexOf(co);
     if(v)dot(v.x,v.y,'#1f3a7a',5,'頂点');
+    if(co.ex){const r=exRef(co);dot(r.x,r.y,'#1f3a7a',5,'基準点',[7,-8]);const hd=exHandle(co);dot(hd.x,hd.y,'#d9480f',5)}
     if(co.trig){const r=trigRef(co);dot(r.x,r.y,'#1f3a7a',5,'基準点',[7,-8]);const hd=trigHandle(co);if(hd)dot(hd.x,hd.y,'#d9480f',5)}
     if(O.dom&&Math.abs(co.a)>1e-12){const mm=domMM(co);dot(mm.max.x,mm.max.y,'#c92a2a',5,'最大');dot(mm.min.x,mm.min.y,'#1f5fbf',5,'最小',[7,16])}
   }
@@ -444,7 +460,7 @@ function draw(){
 function solve(a,b,c){if(Math.abs(a)<1e-12){return Math.abs(b)<1e-12?[]:[-c/b]}const D=b*b-4*a*c;if(D<-1e-9)return[];if(Math.abs(D)<=1e-9)return[-b/(2*a)];const s=Math.sqrt(D);return[(-b-s)/(2*a),(-b+s)/(2*a)].sort((x,y)=>x-y)}
 function posSegs(co){const r=solve(co.a,co.b,co.c);const pts=[-1e6,...r,1e6];const segs=[];for(let i=0;i<pts.length-1;i++){const m=(pts[i]+pts[i+1])/2;if(fval(co,m)>0)segs.push([pts[i],pts[i+1]])}return segs}
 const domL=()=>isTrig()?O.dt*PI:O.dt,domR=()=>isTrig()?(O.dt+O.dw)*PI:O.dt+O.dw;
-function domMM(co){const l=domL(),r=domR(),v=vertexOf(co);const c=[l,r];if(v&&v.x>l&&v.x<r)c.push(v.x);
+function domMM(co){const l=domL(),r=domR(),v=vertexOf(co);const c=[l,r];if(co.ex){const pts=[];for(let i=0;i<=2000;i++){const x=l+(r-l)*i/2000,y=fval(co,x);if(isFinite(y))pts.push({x,y})}if(!pts.length)return{max:{x:NaN,y:NaN},min:{x:NaN,y:NaN},none:true};let mx=pts[0],mn=pts[0];for(const p of pts){if(p.y>mx.y)mx=p;if(p.y<mn.y)mn=p}return{max:mx,min:mn,open:co.kind==='log'&&l<=co.p}}if(v&&v.x>l&&v.x<r)c.push(v.x);
   if(co.trig&&Math.abs(co.b)>1e-12){const T=2*PI/Math.abs(co.b);for(const th of[0,PI]){const base=(co.fn==='cos'?0:PI/2)+th;let x=co.p+base/co.b;x=x-Math.floor((x-l)/T)*T;for(;x<r;x+=T)if(x>l)c.push(x)}}const pts=c.map(x=>({x,y:fval(co,x)}));let mx=pts[0],mn=pts[0];for(const p of pts){if(p.y>mx.y+1e-12)mx=p;if(p.y<mn.y-1e-12)mn=p}return{max:mx,min:mn}}
 /* pan/zoom/drag */
 const ptrs=new Map();let dragPt=null,panStart=null,pinch0=null;
@@ -465,6 +481,7 @@ let dragV0=null;
 const canDragV=()=>P.form==='v'?!lock.p&&!lock.q:!lock.b&&!lock.c;
 function hitCurve(px,py){
   const co=coef();if(co.err)return null;
+  if(co.ex){const r=exRef(co),hd=exHandle(co),f=P.form;if(Math.hypot(SX(r.x)-px,SY(r.y)-py)<16&&!lock[f+'p']&&!lock[f+'q']&&!lock[f+'k'])return 'eref';if(Math.hypot(SX(hd.x)-px,SY(hd.y)-py)<16&&!lock[f+'a']&&!lock[f+'k'])return 'ehd';return null}
   if(co.trig){const r=trigRef(co),hd=trigHandle(co);const pk=P.form==='s'?'tp':'tc';
     if(Math.hypot(SX(r.x)-px,SY(r.y)-py)<16&&!lock[pk]&&!lock.tq)return 'tref';
     if(hd&&Math.hypot(SX(hd.x)-px,SY(hd.y)-py)<16&&!lock.ta&&!lock.tb&&!lock[pk])return 'thd';
@@ -483,6 +500,10 @@ function setTrig(a,b,pr,q){/* write into current trig form with rounding */
 }
 function dragCurve(px,py){
   const s=STEP;
+  if(dragPt==='eref'||dragPt==='ehd'){const co=coef();const f=P.form,V=P[f];const x=IX(px),y=IY(py);const r=v=>rnd(Math.round(v/STEP)*STEP,1e6);
+    if(dragPt==='eref'){if(co.kind==='exp'){const np=r(x),nq=r(y-co.k);if(inR(f+'p',np)&&inR(f+'q',nq)){V[f+'p']=np;V[f+'q']=nq}}else{const np=r(x-1),nq=r(y);if(inR(f+'p',np)&&inR(f+'q',nq)){V[f+'p']=np;V[f+'q']=nq}}}
+    else{if(co.kind==='exp'){const na=rnd(Math.round((y-co.q)/co.k/0.05)*0.05,1e6);if(na>0&&Math.abs(na-1)>1e-9&&inR(f+'a',na))V[f+'a']=na}else{const na=rnd(Math.round((x-co.p)/0.05)*0.05,1e6),nk=r(y-co.q);if(na>0&&Math.abs(na-1)>1e-9&&inR(f+'a',na))V[f+'a']=na;if(Math.abs(nk)>1e-9&&inR(f+'k',nk))V[f+'k']=nk}}
+    syncInputs();afterChange();return}
   if(dragPt==='tref'||dragPt==='thd'){
     const co=coef();const x=IX(px),y=IY(py);
     if(dragPt==='tref'){const q=co.fn==='cos'?y-co.a:y;setTrig(co.a,co.b,x/PI,q)}
@@ -503,12 +524,12 @@ function dragCurve(px,py){
 cv.addEventListener('pointermove',e=>{
   if(!ptrs.has(e.pointerId)){
     if(e.pointerType==='mouse'&&!(mode==='pred'&&pred&&!pred.done)){const r=cv.getBoundingClientRect();const px=e.clientX-r.left,py=e.clientY-r.top;let c='grab';
-      if(P.form==='t'){const t=P.t;if(['a','b','c'].some(n=>Math.hypot(SX(t[n+'x'])-px,SY(t[n+'y'])-py)<14))c='move'}else{const h=hitCurve(px,py);if(h==='vertex'||h==='tref'||h==='thd')c='move';else if(h)c='ns-resize'}
+      if(P.form==='t'){const t=P.t;if(['a','b','c'].some(n=>Math.hypot(SX(t[n+'x'])-px,SY(t[n+'y'])-py)<14))c='move'}else{const h=hitCurve(px,py);if(h==='vertex'||h==='tref'||h==='thd'||h==='eref'||h==='ehd')c='move';else if(h)c='ns-resize'}
       cv.style.cursor=c}
     return}
   const r=cv.getBoundingClientRect();const px=e.clientX-r.left,py=e.clientY-r.top;ptrs.set(e.pointerId,{x:px,y:py});
   if(pinch0&&ptrs.size===2){const a=[...ptrs.values()];const d=Math.hypot(a[0].x-a[1].x,a[0].y-a[1].y);G.sc=Math.min(400,Math.max(6,pinch0.sc*d/pinch0.d));draw();return}
-  if(dragPt==='vertex'||dragPt==='open'||dragPt==='tref'||dragPt==='thd'){dragCurve(px,py);return}
+  if(dragPt==='vertex'||dragPt==='open'||dragPt==='tref'||dragPt==='thd'||dragPt==='eref'||dragPt==='ehd'){dragCurve(px,py);return}
   if(dragPt){const s=STEP;let x=Math.round(IX(px)/s)*s,y=Math.round(IY(py)/s)*s;P.t[dragPt+'x']=rnd(x,1e6);P.t[dragPt+'y']=rnd(y,1e6);syncInputs();afterChange();return}
   if(panStart){G.cx=panStart.cx-(px-panStart.px)/G.sc;G.cy=panStart.cy+(py-panStart.py)/G.sc;draw()}
 });
@@ -521,6 +542,7 @@ function irow(k,v){return `<div class="irow"><b>${k}</b><span>${v}</span></div>`
 function showInfo(){
   const co=coef(),box=$('#info');
   if(co.err){box.innerHTML=`<div class="err">エラー：${co.err}。<br>この3点を通る2次関数はないため，グラフは表示されません。</div>`;return}
+  if(co.ex){box.innerHTML=exInfo(co);return}
   if(co.trig){box.innerHTML=trigInfo(co);return}
   const{a,b,c}=co;let h=irow('一般形',K('y='+poly(a,b,c)));
   if(Math.abs(a)<1e-12){box.innerHTML=h+'<div class="note">a = 0 なので2次関数ではありません（直線）。</div>';return}
@@ -572,9 +594,41 @@ function trigInfo(co){
   h+=`<details open><summary>y=${fn} x からの変換の順序</summary><div class="steps">${st.length===1?st[0]+'そのまま':st[0]+'<br>'+st.slice(1).map((s,i)=>(i+1)+'. '+s).join('<br>')}</div></details>`;
   return h;
 }
+function exTex(co){const{a,k,p,q}=co;const ks=coefTex(k);let s;
+  if(co.kind==='exp'){const at=a<1?'\\left('+fracTex(a)+'\\right)':fracTex(a);const ex=Math.abs(p)<1e-9?'x':'x'+(p>0?'-':'+')+fx(Math.abs(p));s=(ks==='-'?'-':ks===''?'':ks+'\\cdot ')+at+'^{'+ex+'}'}
+  else{const in_=Math.abs(p)<1e-9?'x':'\\left(x'+(p>0?'-':'+')+fx(Math.abs(p))+'\\right)';s=ks+'\\log_{'+fracTex(a)+'}'+(Math.abs(p)<1e-9?' ':'')+in_}
+  if(Math.abs(q)>1e-9)s+=(q>0?'+':'-')+fx(Math.abs(q));return s}
+function exInfo(co){
+  const{a,k,p,q}=co;let h=irow('式',K('y='+exTex(co)));
+  if(Math.abs(k)<1e-12)return h+'<div class="note">k = 0 なので定数関数です。</div>';
+  const inc=(k>0)===(a>1);
+  if(co.kind==='exp'){
+    h+=irow('漸近線',K('y='+fx(q)));h+=irow('定義域','すべての実数');h+=irow('値域',K(k>0?'y>'+fx(q):'y<'+fx(q)));
+    h+=irow('増減',inc?'増加関数':'減少関数');h+=irow('通る点',K(`(${fx(p)},\\ ${fx(k+q)})`)+'（x−p=0）');h+=irow('y 切片',K(fx(fval(co,0))));
+    const r=rootsK(co,0,-60,60);h+=irow('x 軸との交点',r.length?K('x='+fx(r[0])):'なし');
+  }else{
+    h+=irow('漸近線',K('x='+fx(p)));h+=irow('定義域',K('x>'+fx(p)));h+=irow('値域','すべての実数');
+    h+=irow('増減',inc?'増加関数':'減少関数');h+=irow('通る点',K(`(${fx(p+1)},\\ ${fx(q)})`)+'（x−p=1）');
+    h+=irow('y 切片',p<0?K(fx(fval(co,0))):'なし（x=0 は定義域の外）');const x0=p+Math.pow(a,-q/k);h+=irow('x 軸との交点',K('x='+fx(x0)));
+  }
+  if(O.k){const L=O.dom?domL():-60,R=O.dom?domR():60;const r=rootsK(co,O.kv,L,R);h+=irow('f(x)=k',`解は ${r.length} 個`+(r.length?'　'+K('x='+r.map(fx).join(',\\ ')):''))}
+  if(O.dom){const mm=domMM(co);h+=irow('定義域',K(`${fx(O.dt)}\\leqq x\\leqq ${fx(O.dt+O.dw)}`));if(mm.none)h+=irow('','この範囲ではグラフがありません');else if(mm.open)h+=irow('','左はしが漸近線より左なので，最大値・最小値は片方がありません');else{h+=irow('最大値',K(`${fx(mm.max.y)}\\ (x=${fx(mm.max.x)})`));h+=irow('最小値',K(`${fx(mm.min.y)}\\ (x=${fx(mm.min.x)})`))}}
+  const base=co.kind==='exp'?'y=a^x':'y=\\log_a x';const st=[];
+  if(Math.abs(Math.abs(k)-1)>1e-9)st.push(`y 軸方向に ${K(fx(Math.abs(k)))} 倍`);if(k<0)st.push('x 軸に関して対称移動');
+  if(Math.abs(p)>1e-9)st.push(`x 軸方向に ${K(fx(p))} 平行移動`);if(Math.abs(q)>1e-9)st.push(`y 軸方向に ${K(fx(q))} 平行移動`);
+  h+=`<details open><summary>${co.kind==='exp'?'y=aˣ':'y=logₐx'} からの変換の順序</summary><div class="steps">${K(base)} を<br>${st.length?st.map((s,i)=>(i+1)+'. '+s).join('<br>'):'そのまま'}</div></details>`;
+  h+='<div class="note" style="margin-top:6px">'+(a>1?'底 a>1：右上がり（k>0 のとき）':'0<a<1：右下がり（k>0 のとき）')+'</div>';
+  return h;
+}
 function par(v){return v<0?`(${fx(v)})`:fx(v)}
 function curEqHTML(){
   const f=P.form,V=P[f],co=coef();let lit,vals;
+  if(f==='x'||f==='l'){
+    const sym=f==='x'?'':'\\log_{a}';const vals2=`a=${fracTex(V[f+'a'])},\\ k=${fx(V[f+'k'])},\\ p=${fx(V[f+'p'])},\\ q=${fx(V[f+'q'])}`;
+    const A=V[f+'a'],kk=V[f+'k'],pp=V[f+'p'],qq=V[f+'q'];const at=A<1?`\\left(${fracTex(A)}\\right)`:fracTex(A);
+    const lit=f==='x'?`y=${par(kk)}\\cdot ${at}^{x-${par(pp)}}+${par(qq)}`:`y=${par(kk)}\\log_{${fracTex(A)}}\\left(x-${par(pp)}\\right)+${par(qq)}`;
+    return `<div class="mini">いまの式</div><div>${K(vals2)}</div><div>${K(lit)}</div><div>${co.err?'<span class="err">'+co.err+'</span>':K('\\phantom{y}='+exTex(co))}</div>`;
+  }
   if(f==='s'||f==='e'){
     const fn=P.fn;const A=par(V.ta),B=par(V.tb),Q=par(V.tq);
     const pv=f==='s'?V.tp:V.tc,pt=pv<0?`\\left(${piTex(pv)}\\right)`:piTex(pv);
@@ -650,7 +704,7 @@ const PREDT=[
 ];
 let PRED=PREDQ;
 function loadVals(form,arr){const o={};KEYS[form].forEach((k,i)=>o[k]=arr[i]);P[form]=o;P.form=form}
-function homeView(){if(isTrig()){G.cx=PI;G.cy=0;G.sc=46}else{G.cx=0;G.cy=0;G.sc=36}}
+function homeView(){if(isTrig()){G.cx=PI;G.cy=0;G.sc=46}else if(isExpo()){G.cx=1;G.cy=1;G.sc=40}else{G.cx=0;G.cy=0;G.sc=36}}
 function startPred(i){
   pred={i,mark:null,choice:null,done:false,correct:null};const pr=PRED[i];
   if(isTrig())P.fn=pr.fn||'sin';
@@ -660,7 +714,7 @@ function startPred(i){
 function renderPred(){
   const pr=PRED[pred.i],c=$('#modeCard');
   let h=`<h3>予想 ${pred.i+1} / ${PRED.length}</h3><div class="qtext">${T(pr.q)}</div><div class="cureq" id="curEq">${curEqHTML()}</div>`;
-  if(pr.kind==='tap')h+=`<div class="mini" style="margin-top:6px">${pred.done?'':'グラフの上をタップして，予想した'+(isTrig()?'山の頂上':'頂点')+'の位置に印をつけよう。'}</div>`;
+  if(pr.kind==='tap')h+=`<div class="mini" style="margin-top:6px">${pred.done?'':'グラフの上をタップして，予想した'+(isTrig()?'山の頂上':isExpo()?'基準点':'頂点')+'の位置に印をつけよう。'}</div>`;
   else{h+='<div class="choices">'+pr.ch.map((s,j)=>{let cl='';if(pred.done){if(j===pr.ans)cl='right';else if(j===pred.choice)cl='wrong'}else if(j===pred.choice)cl='sel';return `<button data-j="${j}" class="${cl}">${CIR[j]}　${T(s)}</button>`}).join('')+'</div>'}
   if(pred.fb)h+=`<div class="fb ${pred.ok?'ok':'ng'}">${pred.fb}</div>`;
   h+=`<div class="row2"><button class="btn" id="pPrev" ${pred.i===0?'disabled':''}>前へ</button>`+(pred.done?`<button class="btn" id="pRe">もう一度</button>`:`<button class="btn pri" id="pChk">答え合わせ</button>`)+`<button class="btn" id="pNext" ${pred.i===PRED.length-1?'disabled':''}>次へ</button></div>`;
@@ -686,7 +740,7 @@ function checkPred(){
   const co=coef();ghost=co.err?null:co;pred.fb='';renderPred();
   animateTo(pr.t[0],pr.t[1],1300,()=>{
     pred.done=true;
-    if(pr.kind==='tap'){const co2=coefOf(pr.t[0],P[pr.t[0]]);const v=isTrig()?firstMax(co2):vertexOf(co2);pred.correct=v;const d=Math.hypot(v.x-pred.mark.x,v.y-pred.mark.y);pred.ok=d<(isTrig()?0.3:0.6);pred.fb=(pred.ok?'ほぼ正解。':'ずれがあります。')+(isTrig()?`正しい山の頂上は (${piTxt(v.x/PI)}, ${fxm(v.y)})`:`正しい頂点は (${fxm(v.x)}, ${fxm(v.y)})`)+`，予想とのずれは ${fx(Math.round(d*10)/10)} です。`}
+    if(pr.kind==='tap'){const co2=coefOf(pr.t[0],P[pr.t[0]]);const v=isTrig()?firstMax(co2):co2.ex?exRef(co2):vertexOf(co2);pred.correct=v;const d=Math.hypot(v.x-pred.mark.x,v.y-pred.mark.y);pred.ok=d<(isTrig()?0.3:0.6);pred.fb=(pred.ok?'ほぼ正解。':'ずれがあります。')+(isTrig()?`正しい山の頂上は (${piTxt(v.x/PI)}, ${fxm(v.y)})`:`正しい${isExpo()?'基準点':'頂点'}は (${fxm(v.x)}, ${fxm(v.y)})`)+`，予想とのずれは ${fx(Math.round(d*10)/10)} です。`}
     else{pred.ok=pred.choice===pr.ans;pred.fb=pred.ok?'正解。':'正解は '+CIR[pr.ans]+' です。'}
     syncInputs();draw();renderPred();
   });
@@ -695,7 +749,8 @@ function checkPred(){
 function newMission(){
   const rp=a=>a[Math.floor(Math.random()*a.length)];let target,form;
   const keep=mis&&mis.fnKey===FN;
-  if(isTrig()){
+  if(isExpo()){const kind=rp(['exp','log']);target=expOf(kind,rp([2,3,0.5,2,0.5]),rp([1,1,2,-1]),rp([-2,-1,0,1,2]),rp([-2,-1,0,1,2]));form=kind==='exp'?'x':'l';P.x={xa:2,xk:1,xp:0,xq:0};P.l={la:2,lk:1,lp:0,lq:0}}
+  else if(isTrig()){
     const b=rp([1,2,3,0.5,1,2]);const pr=b===0.5?rp([-1/3,-1/6,0,1/6,1/3,1/2]):rp([-1/2,-1/3,-1/4,-1/6,0,1/6,1/4,1/3,1/2,2/3]);
     target=trigOf('sin',rp([1,2,-1,-2,1.5]),b,pr,rp([-1,0,1,0]));form=keep?mis.form:'s';
     P.s={ta:1,tb:1,tp:0,tq:0};P.e={ta:1,tb:1,tc:0,tq:0};
@@ -707,16 +762,17 @@ function newMission(){
   mis={fnKey:FN,form,target,fb:'',ok:false,score:keep?mis.score:0,tries:keep?mis.tries:0,hint:false};
   P.form=form;ghost=null;trail=[];lock={};buildParams();homeView();afterChange();renderMis();
 }
-function sameCurve(a,b){const L=isTrig()?-2*PI:-6,R=isTrig()?2*PI:6;for(let i=0;i<=200;i++){const x=L+(R-L)*i/200;if(Math.abs(fval(a,x)-fval(b,x))>0.02)return false}return true}
+function sameCurve(a,b){const L=isTrig()?-2*PI:isExpo()?-4:-6,R=isTrig()?2*PI:isExpo()?6:6;for(let i=0;i<=200;i++){const x=L+(R-L)*i/200;const fa=fval(a,x),fb=fval(b,x);if(isFinite(fa)!==isFinite(fb)){if(Math.min(Math.abs(fa)||0,Math.abs(fb)||0)<50&&isFinite(fa)+isFinite(fb)===1&&!(x>Math.max(a.p||0,b.p||0)-1e-6&&false))return false;continue}if(!isFinite(fa))continue;if(Math.abs(fa)<60&&Math.abs(fa-fb)>0.02)return false}return true}
 function renderMis(){
-  const fn={v:'$a(x-p)^2+q$（標準形）',g:'$ax^2+bx+c$（一般形）',t:'3点を通る',s:'$a\\sin b(x-p)+q$',e:'$a\\sin(bx+c)+q$'}[mis.form];
+  const fn={v:'$a(x-p)^2+q$（標準形）',g:'$ax^2+bx+c$（一般形）',t:'3点を通る',s:'$a\\sin b(x-p)+q$',e:'$a\\sin(bx+c)+q$',x:'$k\\cdot a^{x-p}+q$',l:'$k\\log_a(x-p)+q$'}[mis.form];
   let h=`<h3>ミッション</h3><div class="qtext">点線のグラフにぴったり重ねよう。<br>使う式の形：${T(fn)}</div><div class="cureq" id="curEq">${curEqHTML()}</div><div class="mini">式の形は下のボタンで変えられます。</div>`;
-  if(mis.hint&&isTrig()){const t=mis.target,fm=firstMax(t);h+=`<div class="mini" style="margin-top:6px">ヒント：振幅 ${fx(Math.abs(t.a))}，周期 ${piTxt(2/Math.abs(t.b))}，最大値 ${fxm(t.q+Math.abs(t.a))}，${'x>0 で最初の山の頂上は x = '+piTxt(fm.x/PI)}</div>`}
+  if(mis.hint&&isExpo()){const t=mis.target,r=exRef(t);h+=`<div class="mini" style="margin-top:6px">ヒント：基準点 (${fxm(r.x)}, ${fxm(r.y)})，漸近線 ${t.kind==='exp'?'y = '+fxm(t.q):'x = '+fxm(t.p)}，底 ${fracTxt(t.a)}，k = ${fxm(t.k)}</div>`}
+  else if(mis.hint&&isTrig()){const t=mis.target,fm=firstMax(t);h+=`<div class="mini" style="margin-top:6px">ヒント：振幅 ${fx(Math.abs(t.a))}，周期 ${piTxt(2/Math.abs(t.b))}，最大値 ${fxm(t.q+Math.abs(t.a))}，${'x>0 で最初の山の頂上は x = '+piTxt(fm.x/PI)}</div>`}
   else if(mis.hint){const v=vertexOf(mis.target);h+=`<div class="mini" style="margin-top:6px">ヒント：目標の頂点は (${fxm(v.x)}, ${fxm(v.y)})，${mis.target.a>0?'下に凸':'上に凸'}，$a$ の値は ${fxm(mis.target.a)}</div>`.replace(/\$a\$/,K('a'))}
   if(mis.fb)h+=`<div class="fb ${mis.ok?'ok':'ng'}">${mis.fb}</div>`;
   h+=`<div class="row2"><button class="btn pri" id="mChk">判定</button><button class="btn" id="mHint">ヒント</button><button class="btn" id="mNew">次のミッション</button></div><div class="mini" style="margin-top:6px">成功 ${mis.score} 回 / 判定 ${mis.tries} 回</div>`;
   $('#modeCard').innerHTML=h;
-  $('#mChk').onclick=()=>{const co=coef();mis.tries++;if(co.err){mis.ok=false;mis.fb='エラーでグラフが表示されていません。'}else{const t=mis.target;const ok=sameCurve(co,t);mis.ok=ok;if(ok){mis.score++;mis.fb='ぴったり一致しました。'}else if(isTrig()){const msg=[];if(Math.abs(Math.abs(co.a)-Math.abs(t.a))>0.02)msg.push('振幅');if(Math.abs(Math.abs(co.b)-Math.abs(t.b))>0.02)msg.push('周期');if(Math.abs(co.q-t.q)>0.02)msg.push('上下の位置');if(!msg.length)msg.push('左右の位置（または向き）');mis.fb='まだ違います：'+msg.join('，')+'がずれています。'}else{const v=vertexOf(co),w=vertexOf(t);const msg=[];if(!v||Math.hypot(v.x-w.x,v.y-w.y)>0.02)msg.push('頂点の位置');if(Math.abs(co.a-t.a)>=0.02)msg.push('開き具合（a）');mis.fb='まだ違います：'+msg.join('と')+'がずれています。'}}renderMis()};
+  $('#mChk').onclick=()=>{const co=coef();mis.tries++;if(co.err){mis.ok=false;mis.fb='エラーでグラフが表示されていません。'}else{const t=mis.target;const ok=sameCurve(co,t);mis.ok=ok;if(ok){mis.score++;mis.fb='ぴったり一致しました。'}else if(isExpo()){const msg=[];const t=mis.target;if(co.kind!==t.kind)msg.push('関数の種類（指数か対数か）');else{const r1=exRef(co),r2=exRef(t);if(Math.hypot(r1.x-r2.x,r1.y-r2.y)>0.02)msg.push('基準点');if(Math.abs(co.a-t.a)>0.02)msg.push('底 a');if(Math.abs(co.k-t.k)>0.02)msg.push('k');}mis.fb='まだ違います：'+(msg.join('，')||'形')+'を見比べよう。'}else if(isTrig()){const msg=[];if(Math.abs(Math.abs(co.a)-Math.abs(t.a))>0.02)msg.push('振幅');if(Math.abs(Math.abs(co.b)-Math.abs(t.b))>0.02)msg.push('周期');if(Math.abs(co.q-t.q)>0.02)msg.push('上下の位置');if(!msg.length)msg.push('左右の位置（または向き）');mis.fb='まだ違います：'+msg.join('，')+'がずれています。'}else{const v=vertexOf(co),w=vertexOf(t);const msg=[];if(!v||Math.hypot(v.x-w.x,v.y-w.y)>0.02)msg.push('頂点の位置');if(Math.abs(co.a-t.a)>=0.02)msg.push('開き具合（a）');mis.fb='まだ違います：'+msg.join('と')+'がずれています。'}}renderMis()};
   $('#mHint').onclick=()=>{mis.hint=true;renderMis()};$('#mNew').onclick=newMission;
 }
 /* ---------------- mode switching ---------------- */
@@ -724,7 +780,7 @@ function setMode(m){
   animId++;mode=m;document.querySelectorAll('#modeTabs .tab').forEach(b=>b.classList.toggle('on',b.dataset.m===m));
   $('#appView').style.display=m==='ex'?'none':'';$('#exView').style.display=m==='ex'?'':'none';
   $('#modeCard').style.display=(m==='pred'||m==='mis')?'':'none';
-  $('#ghint').textContent=m==='pred'?'答え合わせの前は係数を動かせません':(isTrig()?'青い基準点をドラッグ：左右・上下に動く／オレンジの点をドラッグ：振幅と周期が変わる／何もない所をドラッグ：画面が動く':'頂点をドラッグ：位置が動く（2つの値が同時に変わる）／線をドラッグ：開き具合 a が変わる／何もない所をドラッグ：画面が動く');
+  $('#ghint').textContent=m==='pred'?'答え合わせの前は係数を動かせません':(isExpo()?'青い基準点をドラッグ：位置が動く／オレンジの点をドラッグ：底 a（対数では k も）が変わる／何もない所をドラッグ：画面が動く':isTrig()?'青い基準点をドラッグ：左右・上下に動く／オレンジの点をドラッグ：振幅と周期が変わる／何もない所をドラッグ：画面が動く':'頂点をドラッグ：位置が動く（2つの値が同時に変わる）／線をドラッグ：開き具合 a が変わる／何もない所をドラッグ：画面が動く');
   if(m==='pred')startPred(pred?pred.i:0);
   else if(m==='mis')newMission();
   else if(m==='ex'){if(!EX.cur)newEx()}
@@ -733,14 +789,15 @@ function setMode(m){
 }
 document.querySelectorAll('#modeTabs .tab').forEach(b=>b.onclick=()=>setMode(b.dataset.m));
 const TYPES={quad:['型1 操作で起こり得るか','型2 3点の入力と方程式の解','型3 エラーになる入力','型4 係数の符号とグラフ','型5 頂点の動き（会話文）','型6 ○×の組合せ'],
+  expo:['型1 グラフから式を読みとる','型2 大小比較','型3 平行移動・対称移動（会話文）','型4 ○×の組合せ','型5 不等式の解'],
   trig:['型1 グラフから式を読みとる','型2 変換の順序（会話文）','型3 式からグラフを選ぶ','型4 方程式の解の個数と最大値','型5 ○×の組合せ']};
 function setFn(fn,keepMode){
   FN=fn;document.querySelectorAll('#fnTabs .tab[data-fn]').forEach(b=>b.classList.toggle('on',b.dataset.fn===fn));
-  PRED=isTrig()?PREDT:PREDQ;pred=null;
-  P.form=isTrig()?'s':'v';buildFormSeg();
-  $('#oTrailL').textContent=isTrig()?'基準点の跡':'頂点の跡';$('#oPosL').style.display=isTrig()?'none':'';$('#oBaseL').style.display=isTrig()?'':'none';
+  PRED=isTrig()?PREDT:isExpo()?PREDE:PREDQ;pred=null;
+  P.form=isTrig()?'s':isExpo()?'x':'v';buildFormSeg();
+  const nq=FN!=='quad';$('#oTrailL').textContent=nq?'基準点の跡':'頂点の跡';$('#oPosL').style.display=nq?'none':'';$('#oBaseL').style.display=nq?'':'none';$('#oBaseL').lastChild.textContent=isExpo()?'y=aˣ と y=logₐx を重ねる':'y=sin x を重ねる';
   $('#dtL').textContent=isTrig()?'左端（×π）':'左端 t';$('#dwL').textContent=isTrig()?'幅（×π）':'幅';
-  if(isTrig()){O.dt=0;O.dw=2;O.pos=false;if(STEP===0.1)setStep(0.5)}else{O.dt=-1;O.dw=3;O.base=false}
+  if(isTrig()){O.dt=0;O.dw=2;O.pos=false;if(STEP===0.1)setStep(0.5)}else if(isExpo()){O.dt=0;O.dw=4;O.pos=false;O.base=false;if(STEP===0.1)setStep(0.5)}else{O.dt=-1;O.dw=3;O.base=false}
   ghost=null;trail=[];stateX=null;$('#backX').disabled=true;$('#xlog').textContent='状態Xを記録すると，そこから何を変えたかがここに出ます。';lock={};
   $('#exType').innerHTML=TYPES[fn].map((s,i)=>`<option value="${i+1}">${s}</option>`).join('');
   if(EX.cur&&EX.cur.fnKey!==fn)EX.cur=null;showBatch();
@@ -1170,17 +1227,173 @@ function s5(R,B){
   }
   throw new Error('s5 failed');
 }
+/* ================= exponential / log worksheets ================= */
+const BASES=[2,3,1/2,1/3,4,1/4];
+const baseTex=a=>a<1?'\\left('+fracTex(a)+'\\right)':fracTex(a);
+const stE=(f,arr,o)=>st(f,arr,o);
+/* E1: read y=a^(x-p)+q from the graph */
+function e1(R,B){
+  for(let tries=0;tries<300;tries++){
+    const ai=ri(R,0,3),a=BASES[ai],p=ri(R,-2,2),q=ri(R,-3,2);
+    const f=x=>Math.pow(a,x-p)+q;const P1=[p,1+q],P2=a>1?[p+1,a+q]:[p-1,1/a+q];
+    if(Math.abs(P2[1])>6)continue;
+    const xr=[Math.min(-1,p-2.5),Math.max(1,p+2.5)],yr=[Math.min(q-1,-1),Math.max(P2[1]+1.5,2)];
+    const g=graphSVG({w:280,h:190,v:[xr[0],xr[1],yr[0],yr[1]],curves:[{f}],hl:[q],pts:[{x:P1[0],y:P1[1],lab:`(${P1[0]}, ${P1[1]})`,dx:6,dy:12},{x:P2[0],y:P2[1],lab:`(${P2[0]}, ${P2[1]})`,dx:6,dy:-4}],yt:[{y:q,lab:'y='+q}]});
+    const k1=B.take(ai,1),k2=B.take(p,1),k3=B.take(q,1);
+    let H=`<p>${T('関数 $y=a^{x-p}+q$（$a$ は $1$ でない正の数）のグラフをコンピュータのグラフ表示ソフトで表示させたところ，図1のようになった。図の破線は漸近線で，グラフは示した2点を通る。')}</p><div class="figs"><div>${g}<div class="figcap">図1</div></div></div>`;
+    H+=talk([['太郎','漸近線の位置から $q$ がわかるね。'],['花子','$x-p=0$ のとき $a^{0}=1$ だから，$y=1+q$ になる点を探せば $p$ もわかるよ。']]);
+    H+=`<p class="sub">(1)　${T('底 $a$ は')} ${BX(k1)} である。${BX(k1)} に当てはまるものを，次の⓪〜⑤のうちから一つ選べ。</p>`+optsBox(BASES.map(b=>'$'+fracTex(b)+'$'),'three');
+    H+=`<p class="sub">(2)　${T('$p=$')} ${BX(k2)}，${T('$q=$')} ${BX(k3)} である。</p>`;
+    const sol=`<p>${T(`漸近線が $y=${q}$ なので $q=${q}$。$y=1+q=${1+q}$ となる点の $x$ 座標が $p$ なので $p=${p}$。もう一方の点から $a^{${P2[0]}-(${p})}+(${q})=${P2[1]}$ より $a=${fracTex(a)}$。`)}</p><p>${k1}：${CIR[ai]}　${k2}：${p}　${k3}：${q}</p>`;
+    return{title:'グラフから式を読みとる',body:H,subs:[{q:1,check:stE('x',[a,1,p,q],'o=g')},{q:2,check:stE('x',[a,1,p,q],'o=g')}],sol,meta:{a,ai,p,q,P1,P2}};
+  }
+  throw new Error('e1 failed');
+}
+/* E2: compare values */
+const PERM=[[0,1,2],[0,2,1],[1,0,2],[1,2,0],[2,0,1],[2,1,0]];
+const PERMCH=PERM.map(o=>o.map(i=>'ABC'[i]).join('<'));
+function e2(R,B){
+  for(let tries=0;tries<500;tries++){
+    const b=pick(R,[2,3]);const exps=shuffle(R,[-1,-1/2,1/3,1/2,2/3,3/4,1,4/3,3/2,5/3,2,5/2]).slice(0,3);
+    const disp=exps.map(r=>{const ms=[1,2,3].filter(m=>Math.pow(b,m)<=27);const m=pick(R,ms);const inv=R()<0.3;const e=r/m;return inv?`\\left(\\frac{1}{${Math.pow(b,m)}}\\right)^{${fracTex(-e)}}`:`${Math.pow(b,m)}^{${fracTex(e)}}`});
+    const vals=exps.map(r=>Math.pow(b,r));const ord=[0,1,2].sort((i,j)=>vals[i]-vals[j]);const a1=PERM.findIndex(o=>o.join()===ord.join());
+    // logs
+    const pool=[];for(const lb of[2,3])for(const m of[1,2,3]){const base=Math.pow(lb,m);if(base>27)continue;for(let N=2;N<=30;N++){const v=Math.log(N)/Math.log(base);if(Math.abs(v*6-Math.round(v*6))<1e-9)continue;if(v>0.8&&v<2.2)pool.push({t:`\\log_{${base}}${N}`,v})}}
+    const L=[];for(const c of shuffle(R,pool)){if(L.every(x=>Math.abs(x.v-c.v)>0.04&&x.t.split('}')[0]!==c.t.split('}')[0]))L.push(c);if(L.length===3)break}
+    if(L.length<3)continue;
+    const lo=[0,1,2].sort((i,j)=>L[i].v-L[j].v);const a2=PERM.findIndex(o=>o.join()===lo.join());
+    const k1=B.take(a1,1),k2=B.take(a2,2);
+    let H=`<p>${T('指数関数・対数関数のグラフを使って，数の大小を調べる。')}</p>`;
+    H+=talk([['太郎','底をそろえれば，$y='+b+'^x$ のグラフで比べられるね。'],['花子','対数は，$y=\\log_{a}x$ のグラフと直線 $y=k$ の位置関係で考えられそう。']]);
+    H+=`<p class="sub">(1)　${T(`$\\mathrm{A}=${disp[0]}$，$\\mathrm{B}=${disp[1]}$，$\\mathrm{C}=${disp[2]}$ の大小関係として正しいものは`)} ${BX(k1)} である。</p>`;
+    H+=`<p class="sub">(2)　${T(`$\\mathrm{A}=${L[0].t}$，$\\mathrm{B}=${L[1].t}$，$\\mathrm{C}=${L[2].t}$ の大小関係として正しいものは`)} ${BX(k2)} である。</p>`;
+    H+=`<p>${BX(k1)}，${BX(k2)} に当てはまるものを，次の⓪〜⑤のうちから一つずつ選べ。ただし，同じものを繰り返し選んでもよい。</p>`+optsBox(PERMCH,'three');
+    const sol=`<h4>(1)</h4><p>${T(`底を $${b}$ にそろえると $\\mathrm{A}=${b}^{${fracTex(exps[0])}}$，$\\mathrm{B}=${b}^{${fracTex(exps[1])}}$，$\\mathrm{C}=${b}^{${fracTex(exps[2])}}$。$y=${b}^x$ は増加関数なので，指数の大小で比べる。`)}</p><p>よって ${CIR[a1]}</p><h4>(2)</h4><p>${T(L.map((x,i)=>`$${'ABC'[i]}=${x.t}\\fallingdotseq ${x.v.toFixed(3)}$`).join('，'))}</p><p>${T('（目安：$\\log_{a}N$ は $a^{k}$ と $N$ を比べると範囲がしぼれる。例えば $2^1<3<2^2$ なら $1<\\log_2 3<2$）')}</p><p>よって ${CIR[a2]}</p>`;
+    return{title:'大小比較',body:H,subs:[{q:1,check:stE('x',[b,1,0,0],'o=gk&k=1')},{q:2,check:stE('l',[b,1,0,0],'o=gbk&k=1.5')}],sol,meta:{b,exps,L,a1,a2}};
+  }
+  throw new Error('e2 failed');
+}
+/* E3: translations and reflections */
+const SYMCH=['$x$ 軸に関して対称','$y$ 軸に関して対称','原点に関して対称','直線 $y=x$ に関して対称'];
+function e3(R,B){
+  for(let tries=0;tries<300;tries++){
+    const b=pick(R,[2,3]),s=pick(R,[1,2]),c=Math.pow(b,s),h=ri(R,1,3)*pick(R,[1,-1]),e=ri(R,-3,3);const d=c*h;
+    const vy=s+e;if(vy===0)continue;
+    const exprIn=`${c}x${d>0?'-':'+'}${Math.abs(d)}`;
+    const gs=shuffle(R,[[0,`y=-${b}^{x}`],[1,`y=\\left(\\frac{1}{${b}}\\right)^{x}`],[2,`y=-\\left(\\frac{1}{${b}}\\right)^{x}`],[3,`y=\\log_{${b}}x`]]).slice(0,2);
+    const k1=B.take(h,1),k2=B.take(vy,1),k3=B.take(gs[0][0],2),k4=B.take(gs[1][0],2);
+    let H=`<p>${T(`関数 $y=\\log_{${b}}(${exprIn})${e?(e>0?'+':'-')+Math.abs(e):''}$ のグラフを，$y=\\log_{${b}}x$ のグラフをもとにしてかくことを考える。`)}</p>`;
+    H+=talk([['太郎',`真数の $${exprIn}$ を $${c}(x${h>0?'-':'+'}${Math.abs(h)})$ とくくると，対数の性質で分けられるね。`],['花子',`$\\log_{${b}}${c}$ は定数だから，それは上下の平行移動になるよ。`]]);
+    H+=`<p class="sub">(1)　${T(`この関数のグラフは，$y=\\log_{${b}}x$ のグラフを $x$ 軸方向に`)} ${BX(k1)}，${T('$y$ 軸方向に')} ${BX(k2)} だけ平行移動したものである。</p>`;
+    H+=`<p class="sub">(2)　${T(`$y=${b}^{x}$ のグラフと，$${gs[0][1]}$ のグラフの位置関係は`)} ${BX(k3)}${T(` であり，$y=${b}^{x}$ のグラフと，$${gs[1][1]}$ のグラフの位置関係は`)} ${BX(k4)} である。${BX(k3)}，${BX(k4)} に当てはまるものを，次の⓪〜③のうちから一つずつ選べ。</p>`+optsBox(SYMCH,'two');
+    const sol=`<h4>(1)</h4><p>${T(`$\\log_{${b}}(${exprIn})=\\log_{${b}}${c}(x${h>0?'-':'+'}${Math.abs(h)})=\\log_{${b}}(x${h>0?'-':'+'}${Math.abs(h)})+${s}$。よって $y=\\log_{${b}}(x-(${h}))+${vy}$ で，$x$ 軸方向に $${h}$，$y$ 軸方向に $${vy}$。`)}</p><h4>(2)</h4><p>${T(`$y=f(x)$ に対し，$-f(x)$ は $x$ 軸対称，$f(-x)$ は $y$ 軸対称，$-f(-x)$ は原点対称。$\\left(\\frac{1}{${b}}\\right)^{x}=${b}^{-x}$。$y=\\log_{${b}}x$ は $y=${b}^{x}$ の逆関数なので直線 $y=x$ に関して対称。`)}</p><p>${k3}：${CIR[gs[0][0]]}　${k4}：${CIR[gs[1][0]]}</p>`;
+    return{title:'平行移動・対称移動（会話文）',body:H,subs:[{q:1,check:stE('l',[b,1,h,vy],'o=gb')},{q:2,check:stE('x',[b,1,0,0],'o=gb')}],sol,meta:{b,s,c,h,e,d,vy,gs:gs.map(g=>g[0])}};
+  }
+  throw new Error('e3 failed');
+}
+/* E4: OX for operations on y=k a^(x-p)+q */
+function eProps(M){
+  const f0=s=>s.k*Math.pow(s.a,-s.p)+s.q;
+  return[
+   {t:'グラフが原点を通ること',h:s=>Math.abs(f0(s))<1e-9,ach:(op,s)=>{const r=-s.q/s.k;if(op==='q')return true;if(op==='k')return Math.abs(s.q)>1e-9;if(op==='a')return Math.abs(s.p)>1e-9&&r>1e-9&&Math.abs(r-1)>1e-9;return r>1e-9},c:'$f(0)=ka^{-p}+q=0$',g:s=>f0(s),eq:true},
+   {t:`漸近線が直線 $y=${M}$ になること`,h:s=>Math.abs(s.q-M)<1e-9,ach:(op,s)=>op==='q',c:'漸近線は $y=q$',g:s=>s.q-M,eq:true},
+   {t:'減少関数になること',h:s=>s.k*Math.log(s.a)<0,ach:(op,s)=>op==='a'||op==='k',c:'$k>0$ かつ $0<a<1$，または $k<0$ かつ $a>1$ のとき減少',g:s=>-s.k*Math.log(s.a),eq:false},
+   {t:'$y$ 切片が負になること',h:s=>f0(s)<-1e-9,ach:(op,s)=>{if(op==='q'||op==='k')return true;if(op==='a'&&Math.abs(s.p)<1e-9)return false;return s.k<0||s.q<-1e-9},c:'$f(0)=ka^{-p}+q<0$',g:s=>-f0(s),eq:false},
+   {t:'グラフが $x$ 軸と共有点をもつこと',h:s=>-s.q/s.k>1e-9,ach:(op,s)=>op==='q'||(op==='k'&&Math.abs(s.q)>1e-9),c:'$ka^{x-p}=-q$ が解をもつ，つまり $-\\dfrac{q}{k}>0$',g:s=>-s.q/s.k,eq:false},
+  ];
+}
+const OPSE={a:'操作A',k:'操作K',p:'操作P',q:'操作Q'};
+function e4(R,B){
+  for(let tries=0;tries<800;tries++){
+    const S={a:pick(R,[2,3,1/2]),k:pick(R,[1,2,-1]),p:pick(R,[-1,1,2]),q:pick(R,[1,2,-1,-2])};
+    if(Math.abs(S.k+S.q)<1e-9)continue;const M=ri(R,-3,3);if(M===S.q)continue;
+    const PR=eProps(M);const okp=PR.map((_,i)=>i).filter(i=>!PR[i].h(S));if(okp.length<3)continue;
+    const ps=shuffle(R,okp).slice(0,3),ops=shuffle(R,['a','k','p','q']).slice(0,2);
+    const res=ops.map(op=>ps.map(pi=>PR[pi].ach(op,S)));if(res.some(r=>r.every(x=>x)||r.every(x=>!x)))continue;
+    const idx=res.map(oxIdx);if(idx[0]===idx[1])continue;
+    const ks=idx.map(i=>B.take(i,1));
+    const co=expOf('exp',S.a,S.k,S.p,S.q);
+    const g=graphSVG({w:190,h:130,v:[-3,4,Math.min(S.q,0)-3,Math.max(S.q,0)+3],curves:[{f:x=>fval(co,x)}],hl:[S.q]});
+    const fig=softFig('v',[{n:'a',val:fracTxt(S.a),pos:58},{n:'k',val:fx(S.k),pos:62},{n:'p',val:fx(S.p),pos:44},{n:'q',val:fx(S.q),pos:66}],g).replace('y=a(x−p)²+q','y=k·a^(x−p)+q');
+    let H=`<p>${T('関数 $f(x)=k\\cdot a^{x-p}+q$（$a$ は $1$ でない正の数，$k\\neq0$）のグラフをコンピュータのグラフ表示ソフトを用いて表示させる。最初に，図1のように値を入力した。この状態を [状態X] とする。')}</p><div class="figs"><div>${fig}<div class="figcap">図1</div></div></div>`;
+    H+=`<div class="ops">${['a','k','p','q'].map(op=>`<div>${OPSE[op]}：${T(`[状態X] から $${op}$ の値だけを変化させる。`)}${op==='a'?T('ただし $a>0,\\ a\\neq1$ とする。'):op==='k'?T('ただし $k\\neq0$ とする。'):''}</div>`).join('')}</div>`;
+    H+=`<p>次の (i)〜(iii) のことが起こり得るかどうかを調べる。起こり得るときは○，起こり得ないときは×で表す。</p><div class="ops">${ps.map((pi,j)=>`<div>(${['i','ii','iii'][j]})　${T(PR[pi].t)}</div>`).join('')}</div>`;
+    H+=ops.map((op,j)=>`<p class="sub">(${j+1})　${OPSE[op]}を行うとき，(i)，(ii)，(iii) の○，×の組合せとして正しいものは ${BX(ks[j])} である。</p>`).join('');
+    H+=`<p>${BX(ks[0])}，${BX(ks[1])} に当てはまるものを，次の⓪〜⑦のうちから一つずつ選べ。ただし，同じものを繰り返し選んでもよい。</p>`+optsBox(OXCH.map(s=>`(i)：${s[0]}　(ii)：${s[1]}　(iii)：${s[2]}`));
+    const sol=`<p>${T(`[状態X] は $a=${fracTex(S.a)},\\ k=${S.k},\\ p=${S.p},\\ q=${S.q}$。漸近線 $y=${S.q}$，$f(0)=${fx(fval(co,0))}$，${S.k*Math.log(S.a)>0?'増加':'減少'}関数。`)}</p>`+ps.map((pi,j)=>`<p>(${['i','ii','iii'][j]}) ${T(PR[pi].c)}</p>`).join('')+ops.map((op,j)=>`<h4>${ks[j]}（${OPSE[op]}）</h4><p>${res[j].map((x,i)=>`(${['i','ii','iii'][i]}) ${x?'○':'×'}`).join('　')}　よって ${CIR[idx[j]]}</p>`).join('');
+    return{title:'○×の組合せ',body:H,subs:[{q:1,check:stE('x',[S.a,S.k,S.p,S.q],'o=g')}],sol,meta:{S,M,ps,ops,ans:idx}};
+  }
+  throw new Error('e4 failed');
+}
+/* E5: inequalities */
+function ineqOpts(p,t){return[`$x>${fracTex(t)}$`,`$x<${fracTex(t)}$`,`$${fracTex(p)}<x<${fracTex(t)}$`,`$x>${fracTex(p)}$`,`$x<${fracTex(p)}$`]}
+function e5(R,B){
+  for(let tries=0;tries<300;tries++){
+    const a=pick(R,[2,3,1/2,1/3]),p=ri(R,-2,2),q=ri(R,-2,2),m=pick(R,[-1,1,2]),c=q+m,dir=pick(R,['>','<']);const t=p+Math.pow(a,m);
+    const a2=pick(R,[2,3,1/2,1/3]),p2=ri(R,-2,2),q2=ri(R,-3,1),m2=pick(R,[1,2,-1]),c2=q2+Math.pow(a2,m2),dir2=pick(R,['>','<']);const t2=p2+m2;
+    if(t2===0||Math.abs(t-p)<1e-9||Math.abs(c2*6-Math.round(c2*6))>1e-9)continue;
+    const inc=a>1;const ans1=(dir==='>')===inc?0:2;const inc2=a2>1;const ans2=(dir2==='>')===inc2?0:1;
+    const k1=B.take(ans1,1),k2=B.take(ans2,2);
+    const lg=`\\log_{${fracTex(a)}}(x${p>0?'-'+p:p<0?'+'+(-p):''})${q?(q>0?'+':'-')+Math.abs(q):''}`;
+    const ex=`${baseTex(a2)}^{x${p2>0?'-'+p2:p2<0?'+'+(-p2):''}}${q2?(q2>0?'+':'-')+Math.abs(q2):''}`;
+    let H=`<p>${T('グラフ表示ソフトで関数のグラフと直線 $y=k$ を表示させ，不等式の解を考える。')}</p>`;
+    H+=talk([['太郎','グラフが直線より上にある $x$ の範囲を読めばいいね。'],['花子','底が $1$ より小さいときは，グラフが右下がりになることに注意しよう。真数の条件も忘れずに。']]);
+    H+=`<p class="sub">(1)　${T(`不等式 $${lg}${dir}${c}$ の解は`)} ${BX(k1)} である。${BX(k1)} の解答群</p>`+optsBox(ineqOpts(p,t),'three');
+    H+=`<p class="sub">(2)　${T(`不等式 $${ex}${dir2}${fracTex(c2)}$ の解は`)} ${BX(k2)} である。${BX(k2)} の解答群</p>`+optsBox([`$x>${t2}$`,`$x<${t2}$`,`$x>${-t2}$`,`$x<${-t2}$`],'four');
+    const sol=`<h4>(1)</h4><p>${T(`真数条件より $x>${p}$。$${lg}${dir}${c}$ より $\\log_{${fracTex(a)}}(x-(${p}))${dir}${m}$。底が${inc?'1より大きいので不等号の向きはそのまま':'1より小さいので不等号の向きが逆になり'}，$x-(${p})${(dir==='>')===inc?'>':'<'}${fracTex(Math.pow(a,m))}$。`)}</p><p>よって ${CIR[ans1]}</p><h4>(2)</h4><p>${T(`$${baseTex(a2)}^{x-(${p2})}${dir2}${fracTex(c2-q2)}=${baseTex(a2)}^{${m2}}$。底が${inc2?'1より大きいので':'1より小さいので向きが逆になり'} $x-(${p2})${(dir2==='>')===inc2?'>':'<'}${m2}$。`)}</p><p>よって ${CIR[ans2]}</p>`;
+    return{title:'不等式の解',body:H,subs:[{q:1,check:stE('l',[a,1,p,q],`o=gk&k=${c}`)},{q:2,check:stE('x',[a2,1,p2,q2],`o=gk&k=${rnd(c2)}`)}],sol,meta:{a,p,q,c,dir,t,ans1,a2,p2,q2,c2,dir2,t2,ans2}};
+  }
+  throw new Error('e5 failed');
+}
+const GENS_E={1:e1,2:e2,3:e3,4:e4,5:e5};
+function selfTestE(n=150){
+  const out=[];let bad=0;const near=(x,y)=>Math.abs(x-y)<1e-6;
+  for(let t=1;t<=5;t++){let ok=0;const errs=[];
+    for(let s=1;s<=n;s++){try{
+      const p=gen('expo',t,s),q=gen('expo',t,s);if(JSON.stringify(p.blanks)!==JSON.stringify(q.blanks))throw 'not deterministic';
+      if(!p.blanks.length||p.blanks.some(b=>!/^[-0-9]$/.test(b.a)))throw 'bad blank';const m=p.meta;
+      if(t===1){const f=x=>Math.pow(m.a,x-m.p)+m.q;if(!near(f(m.P1[0]),m.P1[1])||!near(f(m.P2[0]),m.P2[1]))throw 'points';/* recover a,p,q from points+asymptote */const qq=m.q,pp=m.P1[0];const aa=m.P2[0]>pp?m.P2[1]-qq:1/(m.P2[1]-qq);if(!near(aa,BASES[+p.blanks[0].a])||String(pp)!==p.blanks.slice(1,1+String(pp).length).map(b=>b.a).join(''))throw 'read'}
+      if(t===2){const v=m.exps.map(r=>Math.pow(m.b,r));const ok1=PERM[m.a1].every((i,j,o)=>j===0||v[o[j-1]]<v[i]);const ok2=PERM[m.a2].every((i,j,o)=>j===0||m.L[o[j-1]].v<m.L[i].v);if(!ok1||!ok2)throw 'order';
+        m.L.forEach(x=>{const mm=/log_\{(\d+)\}(\d+)/.exec(x.t);if(!near(Math.log(+mm[2])/Math.log(+mm[1]),x.v))throw 'logval'})}
+      if(t===3){const f=x=>Math.log(m.c*x-m.d)/Math.log(m.b)+m.e;const g=x=>Math.log(x-m.h)/Math.log(m.b)+m.vy;for(const x of[m.h+0.3,m.h+1.7,m.h+5])if(!near(f(x),g(x)))throw 'shift';
+        const base=x=>Math.pow(m.b,x);const G={0:x=>-base(x),1:x=>Math.pow(1/m.b,x),2:x=>-Math.pow(1/m.b,x),3:x=>Math.log(x)/Math.log(m.b)};
+        const rel=(g)=>{const xs=[0.4,1.3,2.2];if(xs.every(x=>near(g(x),-base(x))))return 0;if(xs.every(x=>near(g(x),base(-x))))return 1;if(xs.every(x=>near(g(x),-base(-x))))return 2;if(xs.every(x=>near(base(g(x)),x)))return 3;return -1};
+        m.gs.forEach(k=>{if(rel(G[k])!==k)throw 'sym'})}
+      if(t===4){const S=m.S,PR=eProps(m.M);const grid={a:[],k:[],p:[],q:[]};for(let i=1;i<=1000;i++){const v=i/100;if(Math.abs(v-1)>1e-9)grid.a.push(v)}for(let i=-2000;i<=2000;i++){if(i)grid.k.push(i/100);grid.p.push(i/200);grid.q.push(i/100)}
+        m.ops.forEach((op,j)=>{const r=m.ps.map(pi=>{const pr=PR[pi];let prev=null,pv=null;for(const v of grid[op]){const s2={...S,[op]:v};const g=pr.g(s2);if(pr.eq){if(Math.abs(g)<1e-9)return true;if(prev!==null&&prev*g<0&&!(op==='a'&&pv<1&&v>1))return true;prev=g;pv=v}else if(g>1e-9)return true}return false});if(oxIdx(r)!==m.ans[j])throw 'ox '+op+' '+r.join()})}
+      if(t===5){const sol1=x=>{if(x<=m.p)return false;const v=Math.log(x-m.p)/Math.log(m.a)+m.q;return m.dir==='>'?v>m.c+1e-9:v<m.c-1e-9};const opt1=[x=>x>m.t,x=>x<m.t,x=>x>m.p&&x<m.t,x=>x>m.p,x=>x<m.p];
+        const sol2=x=>{const v=Math.pow(m.a2,x-m.p2)+m.q2;return m.dir2==='>'?v>m.c2+1e-9:v<m.c2-1e-9};const opt2=[x=>x>m.t2,x=>x<m.t2,x=>x>-m.t2,x=>x<-m.t2];
+        const xs=[];for(let i=-800;i<=800;i++)xs.push(i/80+0.00123);const match=(f,g)=>xs.every(x=>f(x)===g(x));
+        const c1=opt1.map((g,i)=>match(sol1,g)?i:-1).filter(i=>i>=0),c2=opt2.map((g,i)=>match(sol2,g)?i:-1).filter(i=>i>=0);if(c1.join()!==String(m.ans1)||c2.join()!==String(m.ans2))throw 'ineq '+c1+'/'+c2}
+      ok++}catch(e){bad++;if(errs.length<3)errs.push(`seed ${s}: ${e}`)}}
+    out.push(`型${t}: ${ok}/${n} 合格`+(errs.length?'  '+errs.join(' / '):''))}
+  return{text:out.join('\n'),bad};
+}
+const PREDE=[
+ {q:'$y=k\\cdot a^{x-p}+q$ で，$a=2$，$k=1$，$q=0$ のまま，$p$ だけを $0$ から $2$ に変える。点 $(0,\\ 1)$（基準点）はどこへ移動するか。',i:['x',[2,1,0,0]],t:['x',[2,1,2,0]],kind:'tap'},
+ {q:'$y=k\\cdot a^{x-p}+q$ で，$a=2$，$k=1$，$p=0$ のまま，$q$ だけを $0$ から $-2$ に変える。基準点はどこへ移動するか。',i:['x',[2,1,0,0]],t:['x',[2,1,0,-2]],kind:'tap'},
+ {q:'$y=k\\cdot a^{x-p}+q$ で，$a=2$，$p=0$，$q=0$ のまま，$k$ だけを $1$ から $-1$ に変える。基準点はどこへ移動するか。',i:['x',[2,1,0,0]],t:['x',[2,-1,0,0]],kind:'tap'},
+ {q:'$y=k\\cdot a^{x-p}+q$ で，$k=1$，$p=1$，$q=1$ のまま，底 $a$ だけを $2$ から $3$ に変える。基準点はどこになるか。',i:['x',[2,1,1,1]],t:['x',[3,1,1,1]],kind:'tap'},
+ {q:'$y=k\\log_a(x-p)+q$ で，$a=2$，$k=1$，$q=0$ のまま，$p$ だけを $0$ から $-2$ に変える。点 $(1,\\ 0)$（基準点）はどこへ移動するか。',i:['l',[2,1,0,0]],t:['l',[2,1,-2,0]],kind:'tap'},
+ {q:'$y=k\\log_a(x-p)+q$ で，$a=2$，$k=1$，$p=0$ のまま，$q$ だけを $0$ から $1$ に変える。基準点はどこへ移動するか。',i:['l',[2,1,0,0]],t:['l',[2,1,0,1]],kind:'tap'},
+ {q:'$y=k\\log_a(x-p)+q$ で，$k=1$，$p=1$，$q=0$ のまま，底 $a$ だけを $2$ から $\\dfrac{1}{2}$ に変える。基準点はどこになるか。',i:['l',[2,1,1,0]],t:['l',[0.5,1,1,0]],kind:'tap'},
+ {q:'$y=a^{x}$ で，底 $a$ を $2$ から $\\dfrac{1}{2}$ に変える。もとのグラフとの関係はどれか。',i:['x',[2,1,0,0]],t:['x',[0.5,1,0,0]],kind:'choice',ch:SYMCH,ans:1},
+ {q:'$y=k\\cdot a^{x}$（$a=2$）で，$k$ を $1$ から $-1$ に変える。もとのグラフとの関係はどれか。',i:['x',[2,1,0,0]],t:['x',[2,-1,0,0]],kind:'choice',ch:SYMCH,ans:0},
+ {q:'$y=2^{x}$ と $y=\\log_2 x$ のグラフの関係はどれか。（「y=aˣ と y=logₐx を重ねる」で確かめる）',i:['l',[2,1,0,0]],t:['l',[2,1,0,0]],kind:'choice',base:true,ch:SYMCH,ans:3},
+ {q:'$y=k\\cdot a^{x-p}+q$ で，$a=2$，$k=1$，$p=0$ のまま，$q$ を $0$ から $-3$ に変える。漸近線はどうなるか。',i:['x',[2,1,0,0]],t:['x',[2,1,0,-3]],kind:'choice',ch:['$y=0$ のまま','$y=-3$','$x=-3$','漸近線はなくなる'],ans:1},
+ {q:'$y=k\\log_a(x-p)+q$ で，$a=2$，$k=1$，$q=0$ のまま，$p$ を $0$ から $3$ に変える。漸近線はどうなるか。',i:['l',[2,1,0,0]],t:['l',[2,1,3,0]],kind:'choice',ch:['$x=0$ のまま','$x=3$','$x=-3$','$y=3$'],ans:1},
+];
 const GENS={1:g1,2:g2,3:g3,4:g4,5:g5,6:g6};
 const GENS_S={1:s1,2:s2,3:s3,4:s4,5:s5};
-const FNNAME={quad:'2次関数',trig:'三角関数'},PFX={quad:'Q',trig:'S'};
+const FNNAME={quad:'2次関数',trig:'三角関数',expo:'指数・対数関数'},PFX={quad:'Q',trig:'S',expo:'E'};
 function gen(a1,a2,a3){
   let fnKey='quad',type,seed;if(typeof a1==='string'){fnKey=a1;type=a2;seed=a3}else{type=a1;seed=a2}
-  const R=rngOf(seed*7919+type*104729+(fnKey==='trig'?77777:0));const B=mkB();const p=(fnKey==='trig'?GENS_S:GENS)[type](R,B);
+  const R=rngOf(seed*7919+type*104729+(fnKey==='trig'?77777:fnKey==='expo'?55555:0));const B=mkB();const p=(fnKey==='trig'?GENS_S:fnKey==='expo'?GENS_E:GENS)[type](R,B);
   p.id=`${PFX[fnKey]}${type}-${seed}`;p.fnKey=fnKey;p.fnName=FNNAME[fnKey];p.type=type;p.seed=seed;p.blanks=B.list;p.groups=B.groups;return p;
 }
 /* ---------- exercise view ---------- */
 const EX={cur:null,marks:{},scored:false};
-function parseId(s){const m=/^\s*([QS]?)([1-6])-(\d{1,6})\s*$/i.exec(s||'');if(!m)return null;const f=m[1].toUpperCase()==='S'?'trig':'quad';if(f==='trig'&&+m[2]>5)return null;return{f,t:+m[2],s:+m[3]}}
+function parseId(s){const m=/^\s*([QSE]?)([1-6])-(\d{1,6})\s*$/i.exec(s||'');if(!m)return null;const c=m[1].toUpperCase();const f=c==='S'?'trig':c==='E'?'expo':'quad';if(f!=='quad'&&+m[2]>5)return null;return{f,t:+m[2],s:+m[3]}}
 function qrSVG(url){try{const q=qrcode(0,'M');q.addData(url);q.make();return q.createSvgTag(2,0)}catch(e){return ''}}
 function paperHTML(p,withQR){
   const exURL=PUBLIC_URL+'?ex='+p.id,chkURL=PUBLIC_URL+'?'+p.subs[0].check;
@@ -1254,7 +1467,7 @@ function scoreEx(p,marks){
 /* ---------- URL state ---------- */
 function applyQuery(U){
   const s=U.get('st');
-  if(s){const a=s.split(',');const f=a[0];if(KEYS[f]&&a.length===KEYS[f].length+1){const tf=(f==='s'||f==='e')?'trig':'quad';if(tf!==FN)setFn(tf,true);loadVals(f,a.slice(1).map(Number));for(const k of KEYS[f])if(ANG[k]){const v=P[f][k]*24;if(Math.abs(v-Math.round(v))<0.05)P[f][k]=Math.round(v)/24}buildFormSeg()}}
+  if(s){const a=s.split(',');const f=a[0];if(KEYS[f]&&a.length===KEYS[f].length+1){const tf=(f==='s'||f==='e')?'trig':(f==='x'||f==='l')?'expo':'quad';if(tf!==FN)setFn(tf,true);loadVals(f,a.slice(1).map(Number));for(const k of KEYS[f])if(ANG[k]){const v=P[f][k]*24;if(Math.abs(v-Math.round(v))<0.05)P[f][k]=Math.round(v)/24}buildFormSeg()}}
   if(U.get('fn'))P.fn=U.get('fn')==='cos'?'cos':'sin';
   const o=U.get('o')||'';O.ghost=o.includes('g')||!U.get('o');O.trail=o.includes('t');O.pos=o.includes('s');O.k=o.includes('k');O.dom=o.includes('d');O.base=o.includes('b');if(U.get('dt'))O.dt=+U.get('dt');if(U.get('dw'))O.dw=+U.get('dw');
   if(U.get('k'))O.kv=+U.get('k');
@@ -1263,7 +1476,7 @@ function applyQuery(U){
   afterChange();
 }
 /* ---------- self test ---------- */
-function selfTest(n=150){const a=selfTestQ(n),b=selfTestS(n);return{text:'【2次関数】\n'+a.text+'\n【三角関数】\n'+b.text,bad:a.bad+b.bad}}
+function selfTest(n=150){const a=selfTestQ(n),b=selfTestS(n),c=selfTestE(n);return{text:'【2次関数】\n'+a.text+'\n【三角関数】\n'+b.text+'\n【指数・対数】\n'+c.text,bad:a.bad+b.bad+c.bad}}
 function selfTestS(n=150){
   const out=[];let bad=0;const near=(x,y)=>Math.abs(x-y)<1e-6;
   for(let t=1;t<=5;t++){
