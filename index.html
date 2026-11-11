@@ -153,8 +153,8 @@ dialog::backdrop{background:rgba(0,0,0,.35)}
     <button class="tab on" data-fn="quad">2次関数</button>
     <button class="tab" data-fn="trig">三角関数</button>
     <button class="tab" data-fn="expo">指数・対数</button>
-    <button class="tab" disabled title="準備中">3次関数</button>
-    <button class="tab" disabled title="準備中">二次曲線</button>
+    <button class="tab" data-fn="cubic">3次関数</button>
+    <button class="tab" data-fn="conic">二次曲線</button>
   </div>
   <div class="spacer"></div>
   <div class="tabs" id="modeTabs">
@@ -236,7 +236,7 @@ dialog::backdrop{background:rgba(0,0,0,.35)}
 </dialog>
 <script>
 'use strict';
-const VERSION='0.5.0';
+const VERSION='0.7.0';
 const PUBLIC_URL='https://sdanno75-spec.github.io/graph/';
 const KANA='アイウエオカキクケコサシスセソタチツテトナニヌネノハヒフヘホマミムメモ';
 const CIR='⓪①②③④⑤⑥⑦⑧⑨';
@@ -266,6 +266,96 @@ const LBL={a:'$a$',p:'$p$',q:'$q$',b:'$b$',c:'$c$',ax:'A の $x$',ay:'A の $y$'
 const RANGE={a:[-5,5],p:[-10,10],q:[-10,10],b:[-10,10],c:[-10,10],ax:[-10,10],ay:[-10,10],bx:[-10,10],by:[-10,10],cx:[-10,10],cy:[-10,10],ta:[-3,3],tb:[-4,4],tp:[-2,2],tc:[-4,4],tq:[-3,3]};
 const ANG={tp:1,tc:1};const BASEK={xa:1,la:1};/* stored in units of pi */
 const FORMS={quad:[['v','a(x−p)²+q'],['g','ax²+bx+c'],['t','3点を通る']],trig:[['s','a sin b(x−p)+q'],['e','a sin(bx+c)+q']],expo:[['x','k·aˣ⁻ᵖ+q'],['l','k·logₐ(x−p)+q']]};
+FORMS.cubic=[['cg','ax³+bx²+cx+d'],['cf','a(x−α)(x−β)(x−γ)'],['cv','a(x−p)³+m(x−p)+q']];
+P.cg={ga:1,gb:0,gc:-3,gd:0};P.cf={fa:1,f1:-1,f2:0,f3:1};P.cv={va:1,vm:-3,vp:0,vq:0};KEYS.cg=['ga','gb','gc','gd'];KEYS.cf=['fa','f1','f2','f3'];KEYS.cv=['va','vm','vp','vq'];
+Object.assign(LBL,{ga:'$a$',gb:'$b$',gc:'$c$',gd:'$d$',fa:'$a$',f1:'$\\alpha$',f2:'$\\beta$',f3:'$\\gamma$',va:'$a$',vm:'$m$',vp:'$p$',vq:'$q$'});
+Object.assign(RANGE,{ga:[-3,3],gb:[-10,10],gc:[-10,10],gd:[-10,10],fa:[-3,3],f1:[-5,5],f2:[-5,5],f3:[-5,5],va:[-3,3],vm:[-10,10],vp:[-5,5],vq:[-5,5]});
+function poly3(a,b,c,d){let s='';const term=(co,x)=>{if(Math.abs(co)<1e-9)return '';const sg=co<0?'-':(s===''?'':'+');const m=Math.abs(co);const ms=(x!==''&&Math.abs(m-1)<1e-9)?'':fx(m);return sg+ms+x};s+=term(a,'x^3');s+=term(b,'x^2');s+=term(c,'x');s+=term(d,'');return s||'0'}
+function factTex(r){return Math.abs(r)<1e-9?'x':'(x'+(r>0?'-':'+')+fx(Math.abs(r))+')'}
+function cubOf(a,b,c,d){return{cub:true,a,b,c,d}}
+function cubFrom(form,V){if(form==='cg')return cubOf(V.ga,V.gb,V.gc,V.gd);
+  if(form==='cf'){const a=V.fa,r1=V.f1,r2=V.f2,r3=V.f3;return Object.assign(cubOf(a,-a*(r1+r2+r3),a*(r1*r2+r1*r3+r2*r3),-a*r1*r2*r3),{roots:[r1,r2,r3]})}
+  const a=V.va,m=V.vm,p=V.vp,q=V.vq;return cubOf(a,-3*a*p,3*a*p*p+m,-a*p*p*p-m*p+q)}
+function cubCenter(co){const x=Math.abs(co.a)<1e-12?0:-co.b/(3*co.a);return{x,y:fval(co,x)}}
+function cubExt(co){if(Math.abs(co.a)<1e-12)return[];const D=co.b*co.b-3*co.a*co.c;if(D<=1e-12)return[];const s=Math.sqrt(D);return[(-co.b-s)/(3*co.a),(-co.b+s)/(3*co.a)].sort((u,v)=>u-v).map(x=>({x,y:fval(co,x),type:(6*co.a*x+2*co.b)<0?'max':'min'}))}
+function cubPredPt(co){return cubExt(co).find(e=>e.type==='max')||cubCenter(co)}
+function cubRoots(co,k,lo,hi){
+  if(Math.abs(co.a)<1e-12)return solve(co.b,co.c,co.d-k).filter(x=>x>=lo-1e-9&&x<hi-1e-9);
+  const f=x=>fval(co,x)-k;const pts=[lo,...cubExt(co).map(e=>e.x).filter(x=>x>lo&&x<hi),hi];const out=[];
+  for(let i=0;i<pts.length-1;i++){let a=pts[i],b=pts[i+1],fa=f(a),fb=f(b);if(Math.abs(fa)<1e-9)out.push(a);else if(Math.abs(fb)>=1e-9&&fa*fb<0){for(let j=0;j<200;j++){const m=(a+b)/2,fm=f(m);if(fa*fm<=0)b=m;else{a=m;fa=fm}}out.push((a+b)/2)}}
+  return out.filter(x=>x<hi-1e-9).sort((u,v)=>u-v).filter((x,i,A)=>i===0||Math.abs(x-A[i-1])>1e-7)}
+function cubInfo(co){
+  const{a,b,c,d}=co;let h=irow('一般形',K('y='+poly3(a,b,c,d)));
+  if(Math.abs(a)<1e-12)return h+'<div class="note">a = 0 なので3次関数ではありません。</div>';
+  const cc=cubCenter(co);h+=irow('導関数',K(`f'(x)=${poly(3*a,2*b,c)}`));
+  const D=b*b-3*a*c;h+=irow("f'(x)=0 の判別式",K(`\\dfrac{D}{4}=b^2-3ac=${fx(D)}`));
+  const ex=cubExt(co);
+  if(ex.length){for(const e of ex)h+=irow(e.type==='max'?'極大値':'極小値',K(`${fx(e.y)}\\ (x=${fx(e.x)})`))}
+  else h+=irow('極値','なし（'+(a>0?'常に増加':'常に減少')+'）');
+  const rs=cubRoots(co,0,-1e4,1e4);h+=irow('x 軸との共有点',`${rs.length} 個　`+K('x='+rs.map(fx).join(',\\ ')));
+  h+=irow('y 切片',K(fx(d)));h+=irow('対称の中心',K(`(${fx(cc.x)},\\ ${fx(cc.y)})`));
+  if(O.pos){const s=posSegs(co);h+=irow('f(x)>0',s.length===0?'解なし':s.map(([l,r])=>K((l<-1e5?'':fx(l)+'<')+'x'+(r>1e5?'':'<'+fx(r)))).join(' , '))}
+  if(O.k){const L=O.dom?domL():-1e4,R=O.dom?domR()+1e-9:1e4;const r=cubRoots(co,O.kv,L,R);h+=irow('f(x)=k',`解は ${r.length} 個`+(r.length?'　'+K('x='+r.map(fx).join(',\\ ')):''))}
+  if(O.dom){const mm=domMM(co);h+=irow('定義域',K(`${fx(O.dt)}\\leqq x\\leqq ${fx(O.dt+O.dw)}`));h+=irow('最大値',K(`${fx(mm.max.y)}\\ (x=${fx(mm.max.x)})`));h+=irow('最小値',K(`${fx(mm.min.y)}\\ (x=${fx(mm.min.x)})`))}
+  if(ex.length===2)h+=`<div class="note" style="margin-top:6px">直線 y=k が極小値と極大値の間（${fx(ex[0].type==='min'?ex[0].y:ex[1].y)}&lt;k&lt;${fx(ex[0].type==='max'?ex[0].y:ex[1].y)}）にあるとき，f(x)=k は異なる3つの実数解をもつ。</div>`;
+  return h;
+}
+FORMS.conic=[['el','楕円'],['hy','双曲線'],['pa','放物線'],['pm','媒介変数'],['po','極方程式']];
+P.el={ea:3,eb:2,eh:0,ek:0};P.hy={ha:2,hb:1,hh:0,hk:0,hs:1};P.pa={pp:1,ph:0,pk:0};P.pm={ma:3,mb:2,mh:0,mk:0,mt:0};P.po={oe:0.5,ol:2};
+KEYS.el=['ea','eb','eh','ek'];KEYS.hy=['ha','hb','hh','hk','hs'];KEYS.pa=['pp','ph','pk'];KEYS.pm=['ma','mb','mh','mk','mt'];KEYS.po=['oe','ol'];
+Object.assign(LBL,{ea:'$a$',eb:'$b$',eh:'$h$',ek:'$k$',ha:'$a$',hb:'$b$',hh:'$h$',hk:'$k$',hs:'右辺（±1）',pp:'$p$',ph:'$h$',pk:'$k$',ma:'$a$',mb:'$b$',mh:'$h$',mk:'$k$',mt:'$\\theta$',oe:'離心率 $e$',ol:'$\\ell$'});
+Object.assign(RANGE,{ea:[0.5,6],eb:[0.5,6],eh:[-5,5],ek:[-5,5],ha:[0.5,6],hb:[0.5,6],hh:[-5,5],hk:[-5,5],hs:[-1,1],pp:[-4,4],ph:[-5,5],pk:[-5,5],ma:[0.5,6],mb:[0.5,6],mh:[-5,5],mk:[-5,5],mt:[0,2],oe:[0,3],ol:[0.5,5]});
+ANG.mt=1;
+function conOf(form,V){const o={con:true,kind:form};
+  if(form==='el')Object.assign(o,{a:V.ea,b:V.eb,h:V.eh,k:V.ek});
+  else if(form==='hy')Object.assign(o,{a:V.ha,b:V.hb,h:V.hh,k:V.hk,s:V.hs>=0?1:-1});
+  else if(form==='pa'){Object.assign(o,{p:V.pp,h:V.ph,k:V.pk});if(Math.abs(V.pp)<1e-9)o.err='p は 0 以外にしてください'}
+  else if(form==='pm')Object.assign(o,{a:V.ma,b:V.mb,h:V.mh,k:V.mk,t:V.mt});
+  else Object.assign(o,{e:V.oe,l:V.ol});
+  return o}
+function conPaths(co){const P2=[];
+  if(co.kind==='el'||co.kind==='pm'){const L=[];for(let i=0;i<=360;i++){const t=i/360*2*PI;L.push([co.h+co.a*Math.cos(t),co.k+co.b*Math.sin(t)])}P2.push(L)}
+  else if(co.kind==='hy'){for(const sg of[1,-1]){const L=[];for(let i=-300;i<=300;i++){const u=i/300*4.5;if(co.s>0)L.push([co.h+sg*co.a*Math.cosh(u),co.k+co.b*Math.sinh(u)]);else L.push([co.h+co.a*Math.sinh(u),co.k+sg*co.b*Math.cosh(u)])}P2.push(L)}}
+  else if(co.kind==='pa'){const L=[];for(let i=-400;i<=400;i++){const t=i/400*24;L.push([co.h+t*t/(4*co.p),co.k+t])}P2.push(L)}
+  else{let L=[];let prev=null;for(let i=1;i<2880;i++){const th=i/2880*2*PI;const den=1-co.e*Math.cos(th);const r=co.l/den;if(!(den>1e-6)||r>300){if(L.length>1)P2.push(L);L=[];continue}L.push([r*Math.cos(th),r*Math.sin(th)])}if(L.length>1)P2.push(L)}
+  return P2}
+function conFoci(co){if(co.kind==='el'||co.kind==='pm'){const c=Math.sqrt(Math.abs(co.a*co.a-co.b*co.b));return co.a>=co.b?[[co.h+c,co.k],[co.h-c,co.k]]:[[co.h,co.k+c],[co.h,co.k-c]]}
+  if(co.kind==='hy'){const c=Math.sqrt(co.a*co.a+co.b*co.b);return co.s>0?[[co.h+c,co.k],[co.h-c,co.k]]:[[co.h,co.k+c],[co.h,co.k-c]]}
+  if(co.kind==='pa')return[[co.h+co.p,co.k]];return[[0,0]]}
+function conCenter(co){if(co.kind==='po')return{x:0,y:0};return{x:co.h,y:co.k}}
+function conP(co){return{x:co.h+co.a*Math.cos(co.t*PI),y:co.k+co.b*Math.sin(co.t*PI)}}
+function conPred(co){if(co.kind==='pm')return conP(co);const f=conFoci(co)[0];return{x:f[0],y:f[1]}}
+function drawConic(co,color,width,dash){ctx.save();ctx.strokeStyle=color;ctx.lineWidth=width;ctx.setLineDash(dash||[]);ctx.beginPath();
+  for(const L of conPaths(co)){let first=true;for(const[x,y]of L){const px=SX(x),py=SY(y);if(Math.abs(px)>5000||Math.abs(py)>5000){first=true;continue}if(first){ctx.moveTo(px,py);first=false}else ctx.lineTo(px,py)}}ctx.stroke();ctx.restore()}
+function conTex(co){const sq=(v,x)=>Math.abs(v)<1e-9?x+'^2':`(${x}${v>0?'-':'+'}${fx(Math.abs(v))})^2`;
+  if(co.kind==='el'||co.kind==='pm')return`\\dfrac{${sq(co.h,'x')}}{${fx(co.a*co.a)}}+\\dfrac{${sq(co.k,'y')}}{${fx(co.b*co.b)}}=1`;
+  if(co.kind==='hy')return`\\dfrac{${sq(co.h,'x')}}{${fx(co.a*co.a)}}-\\dfrac{${sq(co.k,'y')}}{${fx(co.b*co.b)}}=${co.s>0?1:-1}`;
+  if(co.kind==='pa')return`${sq(co.k,'y')}=${fx(4*co.p)}${Math.abs(co.h)<1e-9?'x':`(x${co.h>0?'-':'+'}${fx(Math.abs(co.h))})`}`;
+  return`r=\\dfrac{${fx(co.l)}}{1-${fx(co.e)}\\cos\\theta}`}
+function conInfo(co){
+  let h=irow('式',K(conTex(co)));const pt=([x,y])=>K(`(${fx(x)},\\ ${fx(y)})`);
+  if(co.kind==='el'||co.kind==='pm'){
+    if(co.kind==='pm'){h+=irow('媒介変数',K(`x=${fx(co.a)}\\cos\\theta${co.h?(co.h>0?'+':'-')+fx(Math.abs(co.h)):''},\\ y=${fx(co.b)}\\sin\\theta${co.k?(co.k>0?'+':'-')+fx(Math.abs(co.k)):''}`));const P0=conP(co);h+=irow('点 P',K(`\\theta=${piTex(co.t)}`)+'　'+pt([P0.x,P0.y]))}
+    h+=irow('種類',Math.abs(co.a-co.b)<1e-9?'円':'楕円');h+=irow('中心',pt([co.h,co.k]));
+    if(Math.abs(co.a-co.b)>1e-9){const F=conFoci(co);h+=irow('焦点',F.map(pt).join('，'));h+=irow('長軸の長さ',K(fx(2*Math.max(co.a,co.b))));h+=irow('短軸の長さ',K(fx(2*Math.min(co.a,co.b))));h+=irow('離心率',K(fx(Math.sqrt(Math.abs(co.a*co.a-co.b*co.b))/Math.max(co.a,co.b))))}
+    h+=irow('頂点',[[co.h+co.a,co.k],[co.h-co.a,co.k],[co.h,co.k+co.b],[co.h,co.k-co.b]].map(pt).join(' '));
+    h+='<div class="note" style="margin-top:6px">焦点からの距離の和が一定（'+fx(2*Math.max(co.a,co.b))+'）の点の集まり。</div>';
+  }else if(co.kind==='hy'){
+    h+=irow('中心',pt([co.h,co.k]));const F=conFoci(co);h+=irow('焦点',F.map(pt).join('，'));
+    h+=irow('頂点',(co.s>0?[[co.h+co.a,co.k],[co.h-co.a,co.k]]:[[co.h,co.k+co.b],[co.h,co.k-co.b]]).map(pt).join('，'));
+    h+=irow('漸近線',K(`y${co.k?(co.k>0?'-':'+')+fx(Math.abs(co.k)):''}=\\pm\\dfrac{${fx(co.b)}}{${fx(co.a)}}\\left(x${co.h?(co.h>0?'-':'+')+fx(Math.abs(co.h)):''}\\right)`));
+    h+=irow('離心率',K(fx(Math.sqrt(co.a*co.a+co.b*co.b)/(co.s>0?co.a:co.b))));
+    h+='<div class="note" style="margin-top:6px">焦点からの距離の差が一定（'+fx(2*(co.s>0?co.a:co.b))+'）の点の集まり。</div>';
+  }else if(co.kind==='pa'){
+    if(co.err)return h+`<div class="err">${co.err}</div>`;
+    h+=irow('頂点',pt([co.h,co.k]));h+=irow('焦点',pt([co.h+co.p,co.k]));h+=irow('準線',K(`x=${fx(co.h-co.p)}`));h+=irow('軸',K(`y=${fx(co.k)}`));
+    h+='<div class="note" style="margin-top:6px">焦点と準線からの距離が等しい点の集まり。</div>';
+  }else{
+    const e=co.e,l=co.l;h+=irow('種類',e<1e-9?'円':e<1-1e-9?'楕円':Math.abs(e-1)<1e-9?'放物線':'双曲線');h+=irow('焦点','原点 O');if(e>1e-9)h+=irow('準線',K(`x=${fx(-l/e)}`));
+    h+=irow('直交座標',K(`${poly(1-e*e,-2*e*l,0).replace(/x\^2/,'x^2').replace(/x$/,'x')}+y^2=${fx(l*l)}`.replace(/^0\+/,'')));
+    h+='<div class="note" style="margin-top:6px">e&lt;1 で楕円，e=1 で放物線，e&gt;1 で双曲線。焦点からの距離と準線までの距離の比が e。</div>';
+  }
+  return h}
 P.x={xa:2,xk:1,xp:0,xq:0};P.l={la:2,lk:1,lp:0,lq:0};KEYS.x=['xa','xk','xp','xq'];KEYS.l=['la','lk','lp','lq'];
 Object.assign(LBL,{xa:'底 $a$',xk:'$k$',xp:'$p$',xq:'$q$',la:'底 $a$',lk:'$k$',lp:'$p$',lq:'$q$'});
 Object.assign(RANGE,{xa:[0.05,5],la:[0.05,5],xk:[-3,3],lk:[-3,3],xp:[-5,5],lp:[-5,5],xq:[-5,5],lq:[-5,5]});
@@ -275,8 +365,8 @@ function parseFrac(t){t=String(t).replace(/\s/g,'').replace(/−/g,'-');const m=
 let FN='quad';
 const O={ghost:true,trail:false,pos:false,k:false,dom:false,base:false,kv:0,dt:-1,dw:3};
 let STEP=0.1,lock={},ghost=null,trail=[],stateX=null,mode='obs';
-const stepOf=k=>ANG[k]?1/12:BASEK[k]?0.05:STEP;
-const isTrig=()=>FN==='trig';const isExpo=()=>FN==='expo';
+const stepOf=k=>k==='hs'?2:ANG[k]?1/12:BASEK[k]?0.05:STEP;
+const isTrig=()=>FN==='trig';const isExpo=()=>FN==='expo';const isCubic=()=>FN==='cubic';const isConic=()=>FN==='conic';
 /* pi fractions (value r means r*pi) */
 function piParts(r){for(const d of[1,2,3,4,6,8,12,24]){const n=r*d;if(Math.abs(n-Math.round(n))<1e-6)return{n:Math.round(n),d}}return null}
 function piTex(r){if(Math.abs(r)<1e-9)return '0';const f=piParts(r);if(!f)return fx(r)+'\\pi';const s=f.n<0?'-':'';const n=Math.abs(f.n);const num=n===1?'\\pi':n+'\\pi';return s+(f.d===1?num:`\\frac{${num}}{${f.d}}`)}
@@ -297,6 +387,8 @@ function fromPts(t){
 function trigOf(fn,a,b,pr,q){return{trig:true,fn,a,b,pr,p:pr*PI,q}}
 function expOf(kind,a,k,p,q){if(Math.abs(a-1)<1e-9||a<=0)return{ex:true,kind,a,k,p,q,err:'底 a は 1 以外の正の数にしてください'};return{ex:true,kind,a,k,p,q}}
 function coefOf(form,vals,fn){
+  if(['el','hy','pa','pm','po'].includes(form))return conOf(form,vals);
+  if(form==='cg'||form==='cf'||form==='cv')return cubFrom(form,vals);
   if(form==='x')return expOf('exp',vals.xa,vals.xk,vals.xp,vals.xq);
   if(form==='l')return expOf('log',vals.la,vals.lk,vals.lp,vals.lq);
   if(form==='s')return trigOf(fn||P.fn,vals.ta,vals.tb,vals.tp,vals.tq);
@@ -306,18 +398,23 @@ function coefOf(form,vals,fn){
   return fromPts(vals);
 }
 function coef(){return coefOf(P.form,P[P.form])}
-function vertexOf(co){if(!co||co.err||co.trig||co.ex||Math.abs(co.a)<1e-12)return null;return{x:-co.b/(2*co.a),y:co.c-co.b*co.b/(4*co.a)}}
+function vertexOf(co){if(!co||co.err||co.trig||co.ex||co.cub||co.con||Math.abs(co.a)<1e-12)return null;return{x:-co.b/(2*co.a),y:co.c-co.b*co.b/(4*co.a)}}
 /* trig: reference point (start of one period) and quarter/half handle */
 function trigRef(co){return{x:co.p,y:co.fn==='cos'?co.q+co.a:co.q}}
 function trigHandle(co){if(Math.abs(co.b)<1e-12)return null;const T=2*PI/Math.abs(co.b);const x=co.p+(co.fn==='cos'?T/2:T/4);return{x,y:fval(co,x)}}
 function exRef(co){return co.kind==='exp'?{x:co.p,y:co.k+co.q}:{x:co.p+1,y:co.q}}
 function exHandle(co){return co.kind==='exp'?{x:co.p+1,y:co.k*co.a+co.q}:{x:co.p+co.a,y:co.k+co.q}}
-function keyPt(co){return co.ex?exRef(co):co.trig?trigRef(co):vertexOf(co)}
+function keyPt(co){return co.con?(co.kind==='pm'?conP(co):conCenter(co)):co.cub?cubCenter(co):co.ex?exRef(co):co.trig?trigRef(co):vertexOf(co)}
 function firstMax(co){/* first local max with x>0 */
   if(co.trig){if(Math.abs(co.b)<1e-12||Math.abs(co.a)<1e-12)return null;const T=2*PI/Math.abs(co.b);const base=co.fn==='cos'?0:PI/2;const th=co.a>0?base:base+PI;/* b(x-p)=th+2n pi */
     let x=co.p+th/co.b;x=x-Math.floor((x-1e-6)/T)*T;if(x<=1e-6)x+=T;return{x,y:fval(co,x)}}
   return vertexOf(co)}
 function setForm(f,convert=true){
+  if(convert&&f!==P.form&&['cg','cf','cv'].includes(f)){const co=coef();const a=co.a;
+    if(f==='cg')P.cg={ga:rnd(co.a,1e4),gb:rnd(co.b,1e4),gc:rnd(co.c,1e4),gd:rnd(co.d,1e4)};
+    if(f==='cv'&&Math.abs(a)>1e-12){const cc=cubCenter(co);P.cv={va:rnd(a,1e4),vm:rnd(co.c-co.b*co.b/(3*a),1e4),vp:rnd(cc.x,1e4),vq:rnd(cc.y,1e4)}}
+    if(f==='cf'&&Math.abs(a)>1e-12){const rs=cubRoots(co,0,-50,50);let R3=null;if(rs.length===3)R3=rs;else if(rs.length===2){const dbl=cubExt(co).find(e=>Math.abs(e.y)<1e-7);if(dbl)R3=[...rs,rs.find(x=>Math.abs(x-dbl.x)<1e-6)].sort((u,v)=>u-v)}else if(rs.length===1&&Math.abs(co.b*co.b-3*a*co.c)<1e-9)R3=[rs[0],rs[0],rs[0]];if(R3)P.cf={fa:rnd(a,1e4),f1:rnd(R3[0],1e4),f2:rnd(R3[1],1e4),f3:rnd(R3[2],1e4)}}
+    convert=false}
   if(convert&&f!==P.form&&(f==='x'||f==='l')){const s0=P[P.form];if(f==='l'&&P.form==='x')P.l={la:s0.xa,lk:s0.xk,lp:s0.xp,lq:s0.xq};if(f==='x'&&P.form==='l')P.x={xa:s0.la,xk:s0.lk,xp:s0.lp,xq:s0.lq};convert=false}
   if(convert&&f!==P.form&&(f==='s'||f==='e')){
     if(f==='e'){const s=P.s;P.e={ta:s.ta,tb:s.tb,tc:rnd(-s.tb*s.tp,1e6),tq:s.tq}}
@@ -369,7 +466,7 @@ function syncInputs(){
 }
 function setVal(k,v){
   const [lo,hi]=RANGE[k];const sp=stepOf(k);
-  v=Math.round(v/sp)*sp;v=Math.min(hi,Math.max(lo,rnd(v,1e6)));
+  if(k==='hs')v=v>=0?1:-1;else{v=Math.round(v/sp)*sp;v=Math.min(hi,Math.max(lo,rnd(v,1e6)))}if(k==='pp'&&Math.abs(v)<1e-9)v=sp;
   P[P.form][k]=v;syncInputs();afterChange();
 }
 function markGhost(){if(O.ghost){const co=coef();ghost=co.err?null:co}}
@@ -385,9 +482,11 @@ const G={cx:0,cy:0,sc:40,W:600,H:400};
 const SX=x=>G.W/2+(x-G.cx)*G.sc,SY=y=>G.H/2-(y-G.cy)*G.sc,IX=px=>(px-G.W/2)/G.sc+G.cx,IY=py=>-(py-G.H/2)/G.sc+G.cy;
 function resize(){const r=cv.parentElement.getBoundingClientRect();const d=window.devicePixelRatio||1;G.W=r.width;G.H=r.height;cv.width=Math.round(r.width*d);cv.height=Math.round(r.height*d);ctx.setTransform(d,0,0,d,0,0);draw()}
 function niceStep(){const c=[0.5,1,2,5,10,20];for(const u of c)if(u*G.sc>=26)return u;return 50}
-function fval(co,x){if(co.ex){if(co.kind==='exp')return co.k*Math.pow(co.a,x-co.p)+co.q;return x>co.p?co.k*Math.log(x-co.p)/Math.log(co.a)+co.q:NaN}return co.trig?co.a*TF(co.fn,co.b*(x-co.p))+co.q:co.a*x*x+co.b*x+co.c}
+function fval(co,x){if(co.cub)return((co.a*x+co.b)*x+co.c)*x+co.d;if(co.ex){if(co.kind==='exp')return co.k*Math.pow(co.a,x-co.p)+co.q;return x>co.p?co.k*Math.log(x-co.p)/Math.log(co.a)+co.q:NaN}return co.trig?co.a*TF(co.fn,co.b*(x-co.p))+co.q:co.a*x*x+co.b*x+co.c}
 /* roots of f(x)=k in [lo,hi) */
 function rootsK(co,k,lo,hi){
+  if(co.con)return[];
+  if(co.cub)return cubRoots(co,k,lo,hi);
   if(!co.trig&&!co.ex)return solve(co.a,co.b,co.c-k).filter(x=>x>=lo-1e-9&&x<hi-1e-9);
   const N=4000,h=(hi-lo)/N,out=[];let px=lo,pv=fval(co,lo)-k;
   if(Math.abs(pv)<1e-9)out.push(lo);
@@ -401,7 +500,7 @@ function rootsK(co,k,lo,hi){
   return out.sort((a,b)=>a-b).filter((x,i,a)=>i===0||Math.abs(x-a[i-1])>1e-6);
 }
 function drawCurve(co,color,width,dash){
-  if(!co||co.err)return;ctx.save();ctx.strokeStyle=color;ctx.lineWidth=width;ctx.setLineDash(dash||[]);ctx.beginPath();
+  if(!co||co.err)return;if(co.con){drawConic(co,color,width,dash);return}ctx.save();ctx.strokeStyle=color;ctx.lineWidth=width;ctx.setLineDash(dash||[]);ctx.beginPath();
   if(co.ex&&co.kind==='log'){const x1=IX(G.W+2);if(x1>co.p){let started=false;for(let t=-7;t<=Math.log10(x1-co.p)+1e-9;t+=0.01){const x=co.p+Math.pow(10,t);if(x<IX(-2))continue;const py=SY(fval(co,x));if(!isFinite(py)||py<-2000||py>G.H+2000)continue;if(!started){ctx.moveTo(SX(x),py);started=true}else ctx.lineTo(SX(x),py)}}ctx.stroke();ctx.restore();return}
   let first=true;for(let px=-2;px<=G.W+2;px+=(co.trig?1:2)){const x=IX(px),y=fval(co,x),py=SY(y);if(!isFinite(py)||py<-2000||py>G.H+2000){first=true;continue}if(first){ctx.moveTo(px,py);first=false}else ctx.lineTo(px,py)}
   ctx.stroke();ctx.restore();
@@ -447,6 +546,14 @@ function draw(){
   if(!co.err){
     const v=vertexOf(co);
     if(v)dot(v.x,v.y,'#1f3a7a',5,'頂点');
+    if(co.con){const F=conFoci(co);
+      if(co.kind==='hy'){ctx.save();ctx.strokeStyle='#c2255c';ctx.lineWidth=1.1;ctx.setLineDash([6,5]);ctx.beginPath();for(const sg of[1,-1]){const m=sg*co.b/co.a;ctx.moveTo(SX(co.h-50),SY(co.k-50*m));ctx.lineTo(SX(co.h+50),SY(co.k+50*m))}ctx.stroke();ctx.restore()}
+      if(co.kind==='pa'||(co.kind==='po'&&co.e>1e-9)){const dx=co.kind==='pa'?co.h-co.p:-co.l/co.e;ctx.save();ctx.strokeStyle='#c2255c';ctx.lineWidth=1.1;ctx.setLineDash([6,5]);ctx.beginPath();ctx.moveTo(SX(dx),0);ctx.lineTo(SX(dx),G.H);ctx.stroke();ctx.restore()}
+      if(!(co.kind==='el'&&Math.abs(co.a-co.b)<1e-9)&&!(co.kind==='pm'&&Math.abs(co.a-co.b)<1e-9))F.forEach((f,i)=>dot(f[0],f[1],'#2b8a3e',5,i?"F'":'F',[6,16]));
+      if(co.kind!=='po'){const c=conCenter(co);dot(c.x,c.y,'#1f3a7a',5,co.kind==='pa'?'頂点':'中心',[7,-8]);
+        if(co.kind==='el'||co.kind==='hy'){dot(co.h+co.a,co.k,'#d9480f',5);dot(co.h,co.k+co.b,'#d9480f',5)}
+        if(co.kind==='pm'){const p0=conP(co);ctx.save();ctx.strokeStyle='#888';ctx.setLineDash([3,3]);ctx.beginPath();ctx.moveTo(SX(co.h),SY(co.k));ctx.lineTo(SX(p0.x),SY(p0.y));ctx.stroke();ctx.restore();dot(p0.x,p0.y,'#d9480f',6,'P',[8,-8])}}}
+    if(co.cub&&Math.abs(co.a)>1e-12){const cc=cubCenter(co);dot(cc.x,cc.y,'#1f3a7a',5,'中心',[7,-8]);for(const e of cubExt(co))dot(e.x,e.y,e.type==='max'?'#c92a2a':'#1f5fbf',5,e.type==='max'?'極大':'極小',[7,e.type==='max'?-8:16]);if(P.form==='cf')['α','β','γ'].forEach((n,i)=>dot(P.cf['f'+(i+1)],0,'#000',5,n,[-4,18]))}
     if(co.ex){const r=exRef(co);dot(r.x,r.y,'#1f3a7a',5,'基準点',[7,-8]);const hd=exHandle(co);dot(hd.x,hd.y,'#d9480f',5)}
     if(co.trig){const r=trigRef(co);dot(r.x,r.y,'#1f3a7a',5,'基準点',[7,-8]);const hd=trigHandle(co);if(hd)dot(hd.x,hd.y,'#d9480f',5)}
     if(O.dom&&Math.abs(co.a)>1e-12){const mm=domMM(co);dot(mm.max.x,mm.max.y,'#c92a2a',5,'最大');dot(mm.min.x,mm.min.y,'#1f5fbf',5,'最小',[7,16])}
@@ -458,9 +565,9 @@ function draw(){
   }
 }
 function solve(a,b,c){if(Math.abs(a)<1e-12){return Math.abs(b)<1e-12?[]:[-c/b]}const D=b*b-4*a*c;if(D<-1e-9)return[];if(Math.abs(D)<=1e-9)return[-b/(2*a)];const s=Math.sqrt(D);return[(-b-s)/(2*a),(-b+s)/(2*a)].sort((x,y)=>x-y)}
-function posSegs(co){const r=solve(co.a,co.b,co.c);const pts=[-1e6,...r,1e6];const segs=[];for(let i=0;i<pts.length-1;i++){const m=(pts[i]+pts[i+1])/2;if(fval(co,m)>0)segs.push([pts[i],pts[i+1]])}return segs}
+function posSegs(co){const r=co.cub?cubRoots(co,0,-1e5,1e5):solve(co.a,co.b,co.c);const pts=[-1e6,...r,1e6];const segs=[];for(let i=0;i<pts.length-1;i++){const m=(pts[i]+pts[i+1])/2;if(fval(co,m)>0)segs.push([pts[i],pts[i+1]])}return segs}
 const domL=()=>isTrig()?O.dt*PI:O.dt,domR=()=>isTrig()?(O.dt+O.dw)*PI:O.dt+O.dw;
-function domMM(co){const l=domL(),r=domR(),v=vertexOf(co);const c=[l,r];if(co.ex){const pts=[];for(let i=0;i<=2000;i++){const x=l+(r-l)*i/2000,y=fval(co,x);if(isFinite(y))pts.push({x,y})}if(!pts.length)return{max:{x:NaN,y:NaN},min:{x:NaN,y:NaN},none:true};let mx=pts[0],mn=pts[0];for(const p of pts){if(p.y>mx.y)mx=p;if(p.y<mn.y)mn=p}return{max:mx,min:mn,open:co.kind==='log'&&l<=co.p}}if(v&&v.x>l&&v.x<r)c.push(v.x);
+function domMM(co){const l=domL(),r=domR(),v=vertexOf(co);const c=[l,r];if(co.cub){for(const e of cubExt(co))if(e.x>l&&e.x<r)c.push(e.x)}if(co.ex){const pts=[];for(let i=0;i<=2000;i++){const x=l+(r-l)*i/2000,y=fval(co,x);if(isFinite(y))pts.push({x,y})}if(!pts.length)return{max:{x:NaN,y:NaN},min:{x:NaN,y:NaN},none:true};let mx=pts[0],mn=pts[0];for(const p of pts){if(p.y>mx.y)mx=p;if(p.y<mn.y)mn=p}return{max:mx,min:mn,open:co.kind==='log'&&l<=co.p}}if(v&&v.x>l&&v.x<r)c.push(v.x);
   if(co.trig&&Math.abs(co.b)>1e-12){const T=2*PI/Math.abs(co.b);for(const th of[0,PI]){const base=(co.fn==='cos'?0:PI/2)+th;let x=co.p+base/co.b;x=x-Math.floor((x-l)/T)*T;for(;x<r;x+=T)if(x>l)c.push(x)}}const pts=c.map(x=>({x,y:fval(co,x)}));let mx=pts[0],mn=pts[0];for(const p of pts){if(p.y>mx.y+1e-12)mx=p;if(p.y<mn.y-1e-12)mn=p}return{max:mx,min:mn}}
 /* pan/zoom/drag */
 const ptrs=new Map();let dragPt=null,panStart=null,pinch0=null;
@@ -481,6 +588,15 @@ let dragV0=null;
 const canDragV=()=>P.form==='v'?!lock.p&&!lock.q:!lock.b&&!lock.c;
 function hitCurve(px,py){
   const co=coef();if(co.err)return null;
+  if(co.con){const f=P.form,K0=KEYS[f];if(co.kind==='po')return null;
+    if(co.kind==='pm'){const p0=conP(co);if(Math.hypot(SX(p0.x)-px,SY(p0.y)-py)<16&&!lock.mt)return 'kt'}
+    const c=conCenter(co);if(Math.hypot(SX(c.x)-px,SY(c.y)-py)<16&&!lock[K0[K0.length-(f==='hy'||f==='pm'?3:2)]]&&!lock[K0[K0.length-(f==='hy'||f==='pm'?2:1)]])return 'kc';
+    if(co.kind==='pa'){const F=conFoci(co)[0];if(Math.hypot(SX(F[0])-px,SY(F[1])-py)<16&&!lock.pp)return 'kf';return null}
+    if(Math.hypot(SX(co.h+co.a)-px,SY(co.k)-py)<16&&!lock[K0[0]])return 'ka';if(Math.hypot(SX(co.h)-px,SY(co.k+co.b)-py)<16&&!lock[K0[1]])return 'kb';return null}
+  if(co.cub){if(Math.abs(co.a)<1e-12)return null;const f=P.form;
+    if(f==='cf')for(let i=0;i<3;i++){const r=P.cf['f'+(i+1)];if(Math.hypot(SX(r)-px,SY(0)-py)<14&&!lock['f'+(i+1)])return 'cr'+i}
+    const cc=cubCenter(co);const lk=f==='cv'?(lock.vp||lock.vq):f==='cg'?(lock.gb||lock.gc||lock.gd):(lock.f1||lock.f2||lock.f3);
+    if(Math.hypot(SX(cc.x)-px,SY(cc.y)-py)<16&&!lk)return 'ccen';return null}
   if(co.ex){const r=exRef(co),hd=exHandle(co),f=P.form;if(Math.hypot(SX(r.x)-px,SY(r.y)-py)<16&&!lock[f+'p']&&!lock[f+'q']&&!lock[f+'k'])return 'eref';if(Math.hypot(SX(hd.x)-px,SY(hd.y)-py)<16&&!lock[f+'a']&&!lock[f+'k'])return 'ehd';return null}
   if(co.trig){const r=trigRef(co),hd=trigHandle(co);const pk=P.form==='s'?'tp':'tc';
     if(Math.hypot(SX(r.x)-px,SY(r.y)-py)<16&&!lock[pk]&&!lock.tq)return 'tref';
@@ -500,6 +616,20 @@ function setTrig(a,b,pr,q){/* write into current trig form with rounding */
 }
 function dragCurve(px,py){
   const s=STEP;
+  if(['kc','ka','kb','kf','kt'].includes(dragPt)){const co=coef();const f=P.form,V=P[f],K0=KEYS[f];const x=IX(px),y=IY(py);const r=v=>rnd(Math.round(v/STEP)*STEP,1e6);
+    if(dragPt==='kt'){let t=Math.atan2((y-co.k)/co.b,(x-co.h)/co.a)/PI;if(t<0)t+=2;t=rnd(Math.round(t*12)/12,1e6);if(t>2)t=0;V.mt=t}
+    else if(dragPt==='kc'){const hk=f==='pa'?['ph','pk']:[K0[2],K0[3]];const X=r(x),Y=r(y);if(inR(hk[0],X)&&inR(hk[1],Y)){V[hk[0]]=X;V[hk[1]]=Y}}
+    else if(dragPt==='kf'){const p=r(x-co.h);if(Math.abs(p)>1e-9&&inR('pp',p))V.pp=p}
+    else if(dragPt==='ka'){const a=r(x-co.h);if(a>=0.5&&inR(K0[0],a))V[K0[0]]=a}
+    else{const b=r(y-co.k);if(b>=0.5&&inR(K0[1],b))V[K0[1]]=b}
+    syncInputs();afterChange();return}
+  if(/^cr\d$/.test(dragPt)||dragPt==='ccen'){const co=coef();const x=IX(px),y=IY(py);const r=v=>rnd(Math.round(v/STEP)*STEP,1e6);
+    if(dragPt!=='ccen'){const k='f'+(+dragPt[2]+1);const v=r(x);if(inR(k,v))P.cf[k]=v}
+    else{const cc=cubCenter(co);const X=r(x),Y=r(y);
+      if(P.form==='cv'){if(inR('vp',X)&&inR('vq',Y)){P.cv.vp=X;P.cv.vq=Y}}
+      else if(P.form==='cg'){const a=co.a,m=co.c-co.b*co.b/(3*a);const n=cubFrom('cv',{va:a,vm:m,vp:X,vq:Y});if(inR('gb',n.b)&&inR('gc',n.c)&&inR('gd',n.d)){P.cg={ga:a,gb:rnd(n.b,1e6),gc:rnd(n.c,1e6),gd:rnd(n.d,1e6)}}}
+      else{const dx=X-r(cc.x);if(dx){const nv=[1,2,3].map(i=>r(P.cf['f'+i]+dx));if(nv.every(v=>inR('f1',v)))nv.forEach((v,i)=>P.cf['f'+(i+1)]=v)}}}
+    syncInputs();afterChange();return}
   if(dragPt==='eref'||dragPt==='ehd'){const co=coef();const f=P.form,V=P[f];const x=IX(px),y=IY(py);const r=v=>rnd(Math.round(v/STEP)*STEP,1e6);
     if(dragPt==='eref'){if(co.kind==='exp'){const np=r(x),nq=r(y-co.k);if(inR(f+'p',np)&&inR(f+'q',nq)){V[f+'p']=np;V[f+'q']=nq}}else{const np=r(x-1),nq=r(y);if(inR(f+'p',np)&&inR(f+'q',nq)){V[f+'p']=np;V[f+'q']=nq}}}
     else{if(co.kind==='exp'){const na=rnd(Math.round((y-co.q)/co.k/0.05)*0.05,1e6);if(na>0&&Math.abs(na-1)>1e-9&&inR(f+'a',na))V[f+'a']=na}else{const na=rnd(Math.round((x-co.p)/0.05)*0.05,1e6),nk=r(y-co.q);if(na>0&&Math.abs(na-1)>1e-9&&inR(f+'a',na))V[f+'a']=na;if(Math.abs(nk)>1e-9&&inR(f+'k',nk))V[f+'k']=nk}}
@@ -524,12 +654,12 @@ function dragCurve(px,py){
 cv.addEventListener('pointermove',e=>{
   if(!ptrs.has(e.pointerId)){
     if(e.pointerType==='mouse'&&!(mode==='pred'&&pred&&!pred.done)){const r=cv.getBoundingClientRect();const px=e.clientX-r.left,py=e.clientY-r.top;let c='grab';
-      if(P.form==='t'){const t=P.t;if(['a','b','c'].some(n=>Math.hypot(SX(t[n+'x'])-px,SY(t[n+'y'])-py)<14))c='move'}else{const h=hitCurve(px,py);if(h==='vertex'||h==='tref'||h==='thd'||h==='eref'||h==='ehd')c='move';else if(h)c='ns-resize'}
+      if(P.form==='t'){const t=P.t;if(['a','b','c'].some(n=>Math.hypot(SX(t[n+'x'])-px,SY(t[n+'y'])-py)<14))c='move'}else{const h=hitCurve(px,py);if(h==='vertex'||h==='tref'||h==='thd'||h==='eref'||h==='ehd'||h==='ccen'||h==='kc'||h==='kt')c='move';else if(h==='ka'||h==='kf')c='ew-resize';else if(h==='kb')c='ns-resize';else if(h&&h.startsWith('cr'))c='ew-resize';else if(h)c='ns-resize'}
       cv.style.cursor=c}
     return}
   const r=cv.getBoundingClientRect();const px=e.clientX-r.left,py=e.clientY-r.top;ptrs.set(e.pointerId,{x:px,y:py});
   if(pinch0&&ptrs.size===2){const a=[...ptrs.values()];const d=Math.hypot(a[0].x-a[1].x,a[0].y-a[1].y);G.sc=Math.min(400,Math.max(6,pinch0.sc*d/pinch0.d));draw();return}
-  if(dragPt==='vertex'||dragPt==='open'||dragPt==='tref'||dragPt==='thd'||dragPt==='eref'||dragPt==='ehd'){dragCurve(px,py);return}
+  if(dragPt==='vertex'||dragPt==='open'||dragPt==='tref'||dragPt==='thd'||dragPt==='eref'||dragPt==='ehd'||dragPt==='ccen'||/^cr\d$/.test(dragPt||'')||['kc','ka','kb','kf','kt'].includes(dragPt)){dragCurve(px,py);return}
   if(dragPt){const s=STEP;let x=Math.round(IX(px)/s)*s,y=Math.round(IY(py)/s)*s;P.t[dragPt+'x']=rnd(x,1e6);P.t[dragPt+'y']=rnd(y,1e6);syncInputs();afterChange();return}
   if(panStart){G.cx=panStart.cx-(px-panStart.px)/G.sc;G.cy=panStart.cy+(py-panStart.py)/G.sc;draw()}
 });
@@ -541,7 +671,10 @@ $('#zin').onclick=()=>{G.sc=Math.min(400,G.sc*1.25);draw()};$('#zout').onclick=(
 function irow(k,v){return `<div class="irow"><b>${k}</b><span>${v}</span></div>`}
 function showInfo(){
   const co=coef(),box=$('#info');
+  if(co.err&&co.con){box.innerHTML=`<div class="err">${co.err}</div>`;return}
   if(co.err){box.innerHTML=`<div class="err">エラー：${co.err}。<br>この3点を通る2次関数はないため，グラフは表示されません。</div>`;return}
+  if(co.con){box.innerHTML=conInfo(co);return}
+  if(co.cub){box.innerHTML=cubInfo(co);return}
   if(co.ex){box.innerHTML=exInfo(co);return}
   if(co.trig){box.innerHTML=trigInfo(co);return}
   const{a,b,c}=co;let h=irow('一般形',K('y='+poly(a,b,c)));
@@ -623,6 +756,15 @@ function exInfo(co){
 function par(v){return v<0?`(${fx(v)})`:fx(v)}
 function curEqHTML(){
   const f=P.form,V=P[f],co=coef();let lit,vals;
+  if(['el','hy','pa','pm','po'].includes(f)){const vals2=KEYS[f].filter(k=>k!=='hs').map(k=>(LBL[k].replace(/\$/g,'').replace(/離心率 /,''))+'='+(ANG[k]?piTex(V[k]):fx(V[k]))).join(',\\ ');
+    return `<div class="mini">いまの式</div><div>${K(vals2)}</div><div>${co.err?'<span class="err">'+co.err+'</span>':K(conTex(co))}</div>`}
+  if(f==='cg'||f==='cf'||f==='cv'){
+    let vals2,lit;
+    if(f==='cg'){vals2=`a=${fx(V.ga)},\\ b=${fx(V.gb)},\\ c=${fx(V.gc)},\\ d=${fx(V.gd)}`;lit=`y=${par(V.ga)}x^3+${par(V.gb)}x^2+${par(V.gc)}x+${par(V.gd)}`}
+    else if(f==='cf'){vals2=`a=${fx(V.fa)},\\ \\alpha=${fx(V.f1)},\\ \\beta=${fx(V.f2)},\\ \\gamma=${fx(V.f3)}`;lit=`y=${par(V.fa)}(x-${par(V.f1)})(x-${par(V.f2)})(x-${par(V.f3)})`}
+    else{vals2=`a=${fx(V.va)},\\ m=${fx(V.vm)},\\ p=${fx(V.vp)},\\ q=${fx(V.vq)}`;lit=`y=${par(V.va)}(x-${par(V.vp)})^3+${par(V.vm)}(x-${par(V.vp)})+${par(V.vq)}`}
+    return `<div class="mini">いまの式</div><div>${K(vals2)}</div><div>${K(lit)}</div><div>${K('\\phantom{y}='+poly3(co.a,co.b,co.c,co.d))}</div>`;
+  }
   if(f==='x'||f==='l'){
     const sym=f==='x'?'':'\\log_{a}';const vals2=`a=${fracTex(V[f+'a'])},\\ k=${fx(V[f+'k'])},\\ p=${fx(V[f+'p'])},\\ q=${fx(V[f+'q'])}`;
     const A=V[f+'a'],kk=V[f+'k'],pp=V[f+'p'],qq=V[f+'q'];const at=A<1?`\\left(${fracTex(A)}\\right)`:fracTex(A);
@@ -714,7 +856,7 @@ function startPred(i){
 function renderPred(){
   const pr=PRED[pred.i],c=$('#modeCard');
   let h=`<h3>予想 ${pred.i+1} / ${PRED.length}</h3><div class="qtext">${T(pr.q)}</div><div class="cureq" id="curEq">${curEqHTML()}</div>`;
-  if(pr.kind==='tap')h+=`<div class="mini" style="margin-top:6px">${pred.done?'':'グラフの上をタップして，予想した'+(isTrig()?'山の頂上':isExpo()?'基準点':'頂点')+'の位置に印をつけよう。'}</div>`;
+  if(pr.kind==='tap')h+=`<div class="mini" style="margin-top:6px">${pred.done?'':'グラフの上をタップして，予想した'+(isTrig()?'山の頂上':isExpo()?'基準点':isCubic()?'極大点':isConic()?(PRED[pred.i].i[0]==='pm'?'点P':'焦点 F'):'頂点')+'の位置に印をつけよう。'}</div>`;
   else{h+='<div class="choices">'+pr.ch.map((s,j)=>{let cl='';if(pred.done){if(j===pr.ans)cl='right';else if(j===pred.choice)cl='wrong'}else if(j===pred.choice)cl='sel';return `<button data-j="${j}" class="${cl}">${CIR[j]}　${T(s)}</button>`}).join('')+'</div>'}
   if(pred.fb)h+=`<div class="fb ${pred.ok?'ok':'ng'}">${pred.fb}</div>`;
   h+=`<div class="row2"><button class="btn" id="pPrev" ${pred.i===0?'disabled':''}>前へ</button>`+(pred.done?`<button class="btn" id="pRe">もう一度</button>`:`<button class="btn pri" id="pChk">答え合わせ</button>`)+`<button class="btn" id="pNext" ${pred.i===PRED.length-1?'disabled':''}>次へ</button></div>`;
@@ -740,7 +882,7 @@ function checkPred(){
   const co=coef();ghost=co.err?null:co;pred.fb='';renderPred();
   animateTo(pr.t[0],pr.t[1],1300,()=>{
     pred.done=true;
-    if(pr.kind==='tap'){const co2=coefOf(pr.t[0],P[pr.t[0]]);const v=isTrig()?firstMax(co2):co2.ex?exRef(co2):vertexOf(co2);pred.correct=v;const d=Math.hypot(v.x-pred.mark.x,v.y-pred.mark.y);pred.ok=d<(isTrig()?0.3:0.6);pred.fb=(pred.ok?'ほぼ正解。':'ずれがあります。')+(isTrig()?`正しい山の頂上は (${piTxt(v.x/PI)}, ${fxm(v.y)})`:`正しい${isExpo()?'基準点':'頂点'}は (${fxm(v.x)}, ${fxm(v.y)})`)+`，予想とのずれは ${fx(Math.round(d*10)/10)} です。`}
+    if(pr.kind==='tap'){const co2=coefOf(pr.t[0],P[pr.t[0]]);const v=isTrig()?firstMax(co2):co2.ex?exRef(co2):co2.cub?cubPredPt(co2):co2.con?conPred(co2):vertexOf(co2);pred.correct=v;const d=Math.hypot(v.x-pred.mark.x,v.y-pred.mark.y);pred.ok=d<(isTrig()?0.3:0.6);pred.fb=(pred.ok?'ほぼ正解。':'ずれがあります。')+(isTrig()?`正しい山の頂上は (${piTxt(v.x/PI)}, ${fxm(v.y)})`:`正しい${isExpo()?'基準点':isCubic()?'極大点':isConic()?'位置':'頂点'}は (${fxm(v.x)}, ${fxm(v.y)})`)+`，予想とのずれは ${fx(Math.round(d*10)/10)} です。`}
     else{pred.ok=pred.choice===pr.ans;pred.fb=pred.ok?'正解。':'正解は '+CIR[pr.ans]+' です。'}
     syncInputs();draw();renderPred();
   });
@@ -749,7 +891,9 @@ function checkPred(){
 function newMission(){
   const rp=a=>a[Math.floor(Math.random()*a.length)];let target,form;
   const keep=mis&&mis.fnKey===FN;
-  if(isExpo()){const kind=rp(['exp','log']);target=expOf(kind,rp([2,3,0.5,2,0.5]),rp([1,1,2,-1]),rp([-2,-1,0,1,2]),rp([-2,-1,0,1,2]));form=kind==='exp'?'x':'l';P.x={xa:2,xk:1,xp:0,xq:0};P.l={la:2,lk:1,lp:0,lq:0}}
+  if(isConic()){const kind=rp(['el','el','hy','pa']);if(kind==='el'){let a,b;do{a=rp([1,2,3,4]);b=rp([1,2,3])}while(a===b);target=conOf('el',{ea:a,eb:b,eh:rp([-2,-1,0,1,2]),ek:rp([-1,0,1])})}else if(kind==='hy')target=conOf('hy',{ha:rp([1,2,3]),hb:rp([1,2]),hh:rp([-1,0,1]),hk:rp([-1,0,1]),hs:rp([1,-1])});else target=conOf('pa',{pp:rp([1,2,-1,0.5]),ph:rp([-2,-1,0,1]),pk:rp([-1,0,1])});form=kind;P.el={ea:3,eb:2,eh:0,ek:0};P.hy={ha:2,hb:1,hh:0,hk:0,hs:1};P.pa={pp:1,ph:0,pk:0}}
+  else if(isCubic()){let r1,r2,r3;do{r1=rp([-3,-2,-1,0,1]);r2=rp([-2,-1,0,1,2]);r3=rp([-1,0,1,2,3])}while(r1===r2&&r2===r3);const a=rp([1,-1,0.5,1]);const T0=cubFrom('cf',{fa:a,f1:r1,f2:r2,f3:r3});target=T0;form=keep?mis.form:'cf';P.cg={ga:1,gb:0,gc:-3,gd:0};P.cf={fa:1,f1:-1,f2:0,f3:1};P.cv={va:1,vm:-3,vp:0,vq:0}}
+  else if(isExpo()){const kind=rp(['exp','log']);target=expOf(kind,rp([2,3,0.5,2,0.5]),rp([1,1,2,-1]),rp([-2,-1,0,1,2]),rp([-2,-1,0,1,2]));form=kind==='exp'?'x':'l';P.x={xa:2,xk:1,xp:0,xq:0};P.l={la:2,lk:1,lp:0,lq:0}}
   else if(isTrig()){
     const b=rp([1,2,3,0.5,1,2]);const pr=b===0.5?rp([-1/3,-1/6,0,1/6,1/3,1/2]):rp([-1/2,-1/3,-1/4,-1/6,0,1/6,1/4,1/3,1/2,2/3]);
     target=trigOf('sin',rp([1,2,-1,-2,1.5]),b,pr,rp([-1,0,1,0]));form=keep?mis.form:'s';
@@ -762,17 +906,19 @@ function newMission(){
   mis={fnKey:FN,form,target,fb:'',ok:false,score:keep?mis.score:0,tries:keep?mis.tries:0,hint:false};
   P.form=form;ghost=null;trail=[];lock={};buildParams();homeView();afterChange();renderMis();
 }
-function sameCurve(a,b){const L=isTrig()?-2*PI:isExpo()?-4:-6,R=isTrig()?2*PI:isExpo()?6:6;for(let i=0;i<=200;i++){const x=L+(R-L)*i/200;const fa=fval(a,x),fb=fval(b,x);if(isFinite(fa)!==isFinite(fb)){if(Math.min(Math.abs(fa)||0,Math.abs(fb)||0)<50&&isFinite(fa)+isFinite(fb)===1&&!(x>Math.max(a.p||0,b.p||0)-1e-6&&false))return false;continue}if(!isFinite(fa))continue;if(Math.abs(fa)<60&&Math.abs(fa-fb)>0.02)return false}return true}
+function sameCurve(a,b){if(a.con||b.con){if(!a.con||!b.con||a.kind!==b.kind)return false;const A=conPaths(a).flat(),Bp=conPaths(b).flat();const near=(p,Q)=>Q.some(q=>Math.hypot(p[0]-q[0],p[1]-q[1])<0.06);const sm=L=>L.filter((p,i)=>i%7===0&&Math.abs(p[0])<8&&Math.abs(p[1])<8);return sm(A).every(p=>near(p,Bp))&&sm(Bp).every(p=>near(p,A))}const L=isTrig()?-2*PI:isExpo()?-4:-6,R=isTrig()?2*PI:isExpo()?6:6;for(let i=0;i<=200;i++){const x=L+(R-L)*i/200;const fa=fval(a,x),fb=fval(b,x);if(isFinite(fa)!==isFinite(fb)){if(Math.min(Math.abs(fa)||0,Math.abs(fb)||0)<50&&isFinite(fa)+isFinite(fb)===1&&!(x>Math.max(a.p||0,b.p||0)-1e-6&&false))return false;continue}if(!isFinite(fa))continue;if(Math.abs(fa)<60&&Math.abs(fa-fb)>0.02)return false}return true}
 function renderMis(){
-  const fn={v:'$a(x-p)^2+q$（標準形）',g:'$ax^2+bx+c$（一般形）',t:'3点を通る',s:'$a\\sin b(x-p)+q$',e:'$a\\sin(bx+c)+q$',x:'$k\\cdot a^{x-p}+q$',l:'$k\\log_a(x-p)+q$'}[mis.form];
+  const fn={v:'$a(x-p)^2+q$（標準形）',g:'$ax^2+bx+c$（一般形）',t:'3点を通る',s:'$a\\sin b(x-p)+q$',e:'$a\\sin(bx+c)+q$',x:'$k\\cdot a^{x-p}+q$',l:'$k\\log_a(x-p)+q$',el:'楕円 $\\dfrac{(x-h)^2}{a^2}+\\dfrac{(y-k)^2}{b^2}=1$',hy:'双曲線 $\\dfrac{(x-h)^2}{a^2}-\\dfrac{(y-k)^2}{b^2}=\\pm1$',pa:'放物線 $(y-k)^2=4p(x-h)$',cg:'$ax^3+bx^2+cx+d$',cf:'$a(x-\\alpha)(x-\\beta)(x-\\gamma)$',cv:'$a(x-p)^3+m(x-p)+q$'}[mis.form];
   let h=`<h3>ミッション</h3><div class="qtext">点線のグラフにぴったり重ねよう。<br>使う式の形：${T(fn)}</div><div class="cureq" id="curEq">${curEqHTML()}</div><div class="mini">式の形は下のボタンで変えられます。</div>`;
-  if(mis.hint&&isExpo()){const t=mis.target,r=exRef(t);h+=`<div class="mini" style="margin-top:6px">ヒント：基準点 (${fxm(r.x)}, ${fxm(r.y)})，漸近線 ${t.kind==='exp'?'y = '+fxm(t.q):'x = '+fxm(t.p)}，底 ${fracTxt(t.a)}，k = ${fxm(t.k)}</div>`}
+  if(mis.hint&&isConic()){const t=mis.target;h+=`<div class="mini" style="margin-top:6px">ヒント：${t.kind==='pa'?'頂点':'中心'} (${fxm(t.h)}, ${fxm(t.k)})，${t.kind==='pa'?'p = '+fxm(t.p):'a = '+fxm(t.a)+'，b = '+fxm(t.b)+(t.kind==='hy'?'，右辺 '+t.s:'')}</div>`}
+  else if(mis.hint&&isCubic()){const t=mis.target;const rs=cubRoots(t,0,-50,50);h+=`<div class="mini" style="margin-top:6px">ヒント：x 軸との共有点 x = ${rs.map(fxm).join(', ')}，y 切片 ${fxm(t.d)}，a = ${fxm(t.a)}</div>`}
+  else if(mis.hint&&isExpo()){const t=mis.target,r=exRef(t);h+=`<div class="mini" style="margin-top:6px">ヒント：基準点 (${fxm(r.x)}, ${fxm(r.y)})，漸近線 ${t.kind==='exp'?'y = '+fxm(t.q):'x = '+fxm(t.p)}，底 ${fracTxt(t.a)}，k = ${fxm(t.k)}</div>`}
   else if(mis.hint&&isTrig()){const t=mis.target,fm=firstMax(t);h+=`<div class="mini" style="margin-top:6px">ヒント：振幅 ${fx(Math.abs(t.a))}，周期 ${piTxt(2/Math.abs(t.b))}，最大値 ${fxm(t.q+Math.abs(t.a))}，${'x>0 で最初の山の頂上は x = '+piTxt(fm.x/PI)}</div>`}
   else if(mis.hint){const v=vertexOf(mis.target);h+=`<div class="mini" style="margin-top:6px">ヒント：目標の頂点は (${fxm(v.x)}, ${fxm(v.y)})，${mis.target.a>0?'下に凸':'上に凸'}，$a$ の値は ${fxm(mis.target.a)}</div>`.replace(/\$a\$/,K('a'))}
   if(mis.fb)h+=`<div class="fb ${mis.ok?'ok':'ng'}">${mis.fb}</div>`;
   h+=`<div class="row2"><button class="btn pri" id="mChk">判定</button><button class="btn" id="mHint">ヒント</button><button class="btn" id="mNew">次のミッション</button></div><div class="mini" style="margin-top:6px">成功 ${mis.score} 回 / 判定 ${mis.tries} 回</div>`;
   $('#modeCard').innerHTML=h;
-  $('#mChk').onclick=()=>{const co=coef();mis.tries++;if(co.err){mis.ok=false;mis.fb='エラーでグラフが表示されていません。'}else{const t=mis.target;const ok=sameCurve(co,t);mis.ok=ok;if(ok){mis.score++;mis.fb='ぴったり一致しました。'}else if(isExpo()){const msg=[];const t=mis.target;if(co.kind!==t.kind)msg.push('関数の種類（指数か対数か）');else{const r1=exRef(co),r2=exRef(t);if(Math.hypot(r1.x-r2.x,r1.y-r2.y)>0.02)msg.push('基準点');if(Math.abs(co.a-t.a)>0.02)msg.push('底 a');if(Math.abs(co.k-t.k)>0.02)msg.push('k');}mis.fb='まだ違います：'+(msg.join('，')||'形')+'を見比べよう。'}else if(isTrig()){const msg=[];if(Math.abs(Math.abs(co.a)-Math.abs(t.a))>0.02)msg.push('振幅');if(Math.abs(Math.abs(co.b)-Math.abs(t.b))>0.02)msg.push('周期');if(Math.abs(co.q-t.q)>0.02)msg.push('上下の位置');if(!msg.length)msg.push('左右の位置（または向き）');mis.fb='まだ違います：'+msg.join('，')+'がずれています。'}else{const v=vertexOf(co),w=vertexOf(t);const msg=[];if(!v||Math.hypot(v.x-w.x,v.y-w.y)>0.02)msg.push('頂点の位置');if(Math.abs(co.a-t.a)>=0.02)msg.push('開き具合（a）');mis.fb='まだ違います：'+msg.join('と')+'がずれています。'}}renderMis()};
+  $('#mChk').onclick=()=>{const co=coef();mis.tries++;if(co.err){mis.ok=false;mis.fb='エラーでグラフが表示されていません。'}else{const t=mis.target;const ok=sameCurve(co,t);mis.ok=ok;if(ok){mis.score++;mis.fb='ぴったり一致しました。'}else if(isConic()){mis.fb='まだ違います：中心（頂点）の位置と a，b（p）を見比べよう。'}else if(isCubic()){mis.fb='まだ違います：x 軸との共有点，y 切片，極値の位置を見比べよう。'}else if(isExpo()){const msg=[];const t=mis.target;if(co.kind!==t.kind)msg.push('関数の種類（指数か対数か）');else{const r1=exRef(co),r2=exRef(t);if(Math.hypot(r1.x-r2.x,r1.y-r2.y)>0.02)msg.push('基準点');if(Math.abs(co.a-t.a)>0.02)msg.push('底 a');if(Math.abs(co.k-t.k)>0.02)msg.push('k');}mis.fb='まだ違います：'+(msg.join('，')||'形')+'を見比べよう。'}else if(isTrig()){const msg=[];if(Math.abs(Math.abs(co.a)-Math.abs(t.a))>0.02)msg.push('振幅');if(Math.abs(Math.abs(co.b)-Math.abs(t.b))>0.02)msg.push('周期');if(Math.abs(co.q-t.q)>0.02)msg.push('上下の位置');if(!msg.length)msg.push('左右の位置（または向き）');mis.fb='まだ違います：'+msg.join('，')+'がずれています。'}else{const v=vertexOf(co),w=vertexOf(t);const msg=[];if(!v||Math.hypot(v.x-w.x,v.y-w.y)>0.02)msg.push('頂点の位置');if(Math.abs(co.a-t.a)>=0.02)msg.push('開き具合（a）');mis.fb='まだ違います：'+msg.join('と')+'がずれています。'}}renderMis()};
   $('#mHint').onclick=()=>{mis.hint=true;renderMis()};$('#mNew').onclick=newMission;
 }
 /* ---------------- mode switching ---------------- */
@@ -780,7 +926,7 @@ function setMode(m){
   animId++;mode=m;document.querySelectorAll('#modeTabs .tab').forEach(b=>b.classList.toggle('on',b.dataset.m===m));
   $('#appView').style.display=m==='ex'?'none':'';$('#exView').style.display=m==='ex'?'':'none';
   $('#modeCard').style.display=(m==='pred'||m==='mis')?'':'none';
-  $('#ghint').textContent=m==='pred'?'答え合わせの前は係数を動かせません':(isExpo()?'青い基準点をドラッグ：位置が動く／オレンジの点をドラッグ：底 a（対数では k も）が変わる／何もない所をドラッグ：画面が動く':isTrig()?'青い基準点をドラッグ：左右・上下に動く／オレンジの点をドラッグ：振幅と周期が変わる／何もない所をドラッグ：画面が動く':'頂点をドラッグ：位置が動く（2つの値が同時に変わる）／線をドラッグ：開き具合 a が変わる／何もない所をドラッグ：画面が動く');
+  $('#ghint').textContent=m==='pred'?'答え合わせの前は係数を動かせません':(isConic()?'中心（頂点）をドラッグ：平行移動／オレンジの点：a，b を変える／放物線は焦点 F で p を変える／媒介変数は点 P を動かせる':isCubic()?'中心（青）をドラッグ：グラフ全体が動く／因数分解形では x 軸上の黒い点（α，β，γ）を左右に動かせる／何もない所をドラッグ：画面が動く':isExpo()?'青い基準点をドラッグ：位置が動く／オレンジの点をドラッグ：底 a（対数では k も）が変わる／何もない所をドラッグ：画面が動く':isTrig()?'青い基準点をドラッグ：左右・上下に動く／オレンジの点をドラッグ：振幅と周期が変わる／何もない所をドラッグ：画面が動く':'頂点をドラッグ：位置が動く（2つの値が同時に変わる）／線をドラッグ：開き具合 a が変わる／何もない所をドラッグ：画面が動く');
   if(m==='pred')startPred(pred?pred.i:0);
   else if(m==='mis')newMission();
   else if(m==='ex'){if(!EX.cur)newEx()}
@@ -789,13 +935,16 @@ function setMode(m){
 }
 document.querySelectorAll('#modeTabs .tab').forEach(b=>b.onclick=()=>setMode(b.dataset.m));
 const TYPES={quad:['型1 操作で起こり得るか','型2 3点の入力と方程式の解','型3 エラーになる入力','型4 係数の符号とグラフ','型5 頂点の動き（会話文）','型6 ○×の組合せ'],
+  conic:['型1 グラフから楕円・双曲線の式','型2 平行移動と標準形（会話文）','型3 媒介変数表示','型4 極方程式','型5 ○×の組合せ'],
+  cubic:['型1 グラフから係数の符号','型2 極値と方程式の解の個数','型3 ○×の組合せ','型4 グラフから式を選ぶ','型5 極値の動き（会話文）'],
   expo:['型1 グラフから式を読みとる','型2 大小比較','型3 平行移動・対称移動（会話文）','型4 ○×の組合せ','型5 不等式の解'],
   trig:['型1 グラフから式を読みとる','型2 変換の順序（会話文）','型3 式からグラフを選ぶ','型4 方程式の解の個数と最大値','型5 ○×の組合せ']};
 function setFn(fn,keepMode){
   FN=fn;document.querySelectorAll('#fnTabs .tab[data-fn]').forEach(b=>b.classList.toggle('on',b.dataset.fn===fn));
-  PRED=isTrig()?PREDT:isExpo()?PREDE:PREDQ;pred=null;
-  P.form=isTrig()?'s':isExpo()?'x':'v';buildFormSeg();
-  const nq=FN!=='quad';$('#oTrailL').textContent=nq?'基準点の跡':'頂点の跡';$('#oPosL').style.display=nq?'none':'';$('#oBaseL').style.display=nq?'':'none';$('#oBaseL').lastChild.textContent=isExpo()?'y=aˣ と y=logₐx を重ねる':'y=sin x を重ねる';
+  PRED=isTrig()?PREDT:isExpo()?PREDE:isCubic()?PREDC:isConic()?PREDK:PREDQ;pred=null;
+  P.form=isTrig()?'s':isExpo()?'x':isCubic()?'cg':isConic()?'el':'v';buildFormSeg();
+  $('#oK').parentElement.style.display=isConic()?'none':'';$('#oDom').parentElement.style.display=isConic()?'none':'';if(isConic()){O.k=false;O.dom=false}
+  const nq=isTrig()||isExpo()||isConic();$('#oTrailL').textContent=isConic()?'中心（点P）の跡':isCubic()?'中心の跡':nq?'基準点の跡':'頂点の跡';$('#oPosL').style.display=nq?'none':'';$('#oBaseL').style.display=(isTrig()||isExpo())?'':'none';$('#oBaseL').lastChild.textContent=isExpo()?'y=aˣ と y=logₐx を重ねる':'y=sin x を重ねる';
   $('#dtL').textContent=isTrig()?'左端（×π）':'左端 t';$('#dwL').textContent=isTrig()?'幅（×π）':'幅';
   if(isTrig()){O.dt=0;O.dw=2;O.pos=false;if(STEP===0.1)setStep(0.5)}else if(isExpo()){O.dt=0;O.dw=4;O.pos=false;O.base=false;if(STEP===0.1)setStep(0.5)}else{O.dt=-1;O.dw=3;O.base=false}
   ghost=null;trail=[];stateX=null;$('#backX').disabled=true;$('#xlog').textContent='状態Xを記録すると，そこから何を変えたかがここに出ます。';lock={};
@@ -881,6 +1030,7 @@ function graphSVG(o){
   for(const t of (o.xt||[]))s+=`<line x1="${sx(t.x)}" y1="${oy-3.5}" x2="${sx(t.x)}" y2="${oy+3.5}" class="ax"/><text class="tk" x="${sx(t.x)}" y="${oy+(t.up?-6:13)}" text-anchor="middle">${t.lab}</text>`;
   for(const t of (o.yt||[]))s+=`<text class="tk" x="${ox-4}" y="${sy(t.y)+4}" text-anchor="end">${t.lab}</text>`;
   for(const cu of (o.curves||[])){const[a,b,c]=cu.co||[0,0,0];let d='';const N=cu.f?400:160;for(let i=0;i<=N;i++){const x=x0+(x1-x0)*i/N,y=cu.f?cu.f(x):a*x*x+b*x+c;const Y=Math.max(-50,Math.min(h+50,sy(y)));d+=(i?'L':'M')+sx(x).toFixed(1)+' '+Y.toFixed(1)}s+=`<path d="${d}" class="${cu.cls||'cv'}" clip-path="url(#${id})"/>`}
+  for(const pl of (o.paths||[])){let d='';let first=true;for(const[x,y]of pl){const X=sx(x),Y=sy(y);if(Math.abs(X)>3000||Math.abs(Y)>3000){first=true;continue}d+=(first?'M':'L')+X.toFixed(1)+' '+Y.toFixed(1);first=false}s+=`<path d="${d}" class="${pl.cls||'cv'}" clip-path="url(#${id})"/>`}
   for(const L of (o.lines||[])){s+=`<line x1="${sx(L[0])}" y1="${sy(L[1])}" x2="${sx(L[2])}" y2="${sy(L[3])}" class="cvd" clip-path="url(#${id})"/>`}
   for(const p of (o.pts||[])){s+=`<circle cx="${sx(p.x)}" cy="${sy(p.y)}" r="2.6"/>`;if(p.lab)s+=`<text class="up" x="${sx(p.x)+(p.dx||4)}" y="${sy(p.y)+(p.dy||-4)}">${p.lab}</text>`}
   return s+'</svg>';
@@ -1383,17 +1533,314 @@ const PREDE=[
  {q:'$y=k\\cdot a^{x-p}+q$ で，$a=2$，$k=1$，$p=0$ のまま，$q$ を $0$ から $-3$ に変える。漸近線はどうなるか。',i:['x',[2,1,0,0]],t:['x',[2,1,0,-3]],kind:'choice',ch:['$y=0$ のまま','$y=-3$','$x=-3$','漸近線はなくなる'],ans:1},
  {q:'$y=k\\log_a(x-p)+q$ で，$a=2$，$k=1$，$q=0$ のまま，$p$ を $0$ から $3$ に変える。漸近線はどうなるか。',i:['l',[2,1,0,0]],t:['l',[2,1,3,0]],kind:'choice',ch:['$x=0$ のまま','$x=3$','$x=-3$','$y=3$'],ans:1},
 ];
+/* ================= cubic worksheets ================= */
+const cubFn=co=>x=>fval(co,x);
+function cubView(co,extra=[]){const pts=[[0,co.d],...cubExt(co).map(e=>[e.x,e.y]),...cubRoots(co,0,-50,50).map(x=>[x,0]),...extra];const cc=cubCenter(co);pts.push([cc.x,cc.y]);return fitView(pts,0.25)}
+/* C1: signs of coefficients from the graph */
+const ADCH=['$a>0,\\ d>0$','$a>0,\\ d<0$','$a<0,\\ d>0$','$a<0,\\ d<0$'],BCCH=['$b>0,\\ c>0$','$b>0,\\ c<0$','$b<0,\\ c>0$','$b<0,\\ c<0$'];
+function c1(R,B){
+  for(let tries=0;tries<500;tries++){
+    const a=pick(R,[1,-1,0.5,-0.5]),x0=pick(R,[-1.5,-1,1,1.5]),m=-Math.sign(a)*pick(R,[2,3,4]),q=pick(R,[-2,-1,1,2,3]);
+    const co=cubFrom('cv',{va:a,vm:m,vp:x0,vq:q});const{b,c,d}=co;
+    if(Math.abs(c)<1||Math.abs(d)<0.8||Math.abs(b)<1e-9)continue;
+    const i1=(a>0?0:2)+(d>0?0:1),i2=(b>0?0:2)+(c>0?0:1);
+    const v=cubView(co);const g=graphSVG({w:240,h:180,v,curves:[{f:cubFn(co)}]});
+    const k1=B.take(i1,1),k2=B.take(i2,2);const ex=cubExt(co);
+    let H=`<p>${T('3次関数 $f(x)=ax^3+bx^2+cx+d$ のグラフをコンピュータのグラフ表示ソフトで表示させたところ，図1のようになった。ただし，座標軸の目盛りは省略している。')}</p><div class="figs"><div>${g}<div class="figcap">図1</div></div></div>`;
+    H+=talk([['太郎','$x$ を大きくしたときのグラフの向きと，$y$ 切片はすぐ読めるね。'],["花子","$b$ と $c$ は，$f'(x)=3ax^2+2bx+c$ を使って考えればいいかな。"]]);
+    H+=`<p class="sub">(1)　${T('$a$，$d$ の符号の組合せとして正しいものは')} ${BX(k1)} である。</p>`+optsBox(ADCH,'four');
+    H+=`<p class="sub">(2)　${T('$b$，$c$ の符号の組合せとして正しいものは')} ${BX(k2)} である。</p>`+optsBox(BCCH,'four');
+    const sol=`<h4>(1)</h4><p>${T(`$x$ を大きくすると $y$ が${a>0?'大きくなる（右上がり）ので $a>0$':'小さくなる（右下がり）ので $a<0$'}。$y$ 切片 $f(0)=d$ が${d>0?'正なので $d>0$':'負なので $d<0$'}。`)}</p><p>よって ${CIR[i1]}</p><h4>(2)</h4><p>${T(`極値をとる $x$ を $x_1,\\ x_2$ とすると，$f'(x)=0$ の2つの解なので $x_1+x_2=-\\dfrac{2b}{3a}$。図から $x_1+x_2${ex[0].x+ex[1].x>0?'>':'<'}0$ なので $b${b>0?'>':'<'}0$。また $f'(0)=c$ は $y$ 軸との交点での接線の傾きで，図から${c>0?'右上がりなので $c>0$':'右下がりなので $c<0$'}。`)}</p><p>よって ${CIR[i2]}</p>`;
+    return{title:'グラフから係数の符号',body:H,subs:[{q:1,check:st('cg',[a,b,c,d],'o=g')},{q:2,check:st('cg',[a,b,c,d],'o=g')}],sol,meta:{a,b,c,d,i1,i2}};
+  }
+  throw new Error('c1 failed');
+}
+/* C2: extrema and number of solutions */
+function c2(R,B){
+  for(let tries=0;tries<500;tries++){
+    const al=ri(R,-3,2),be=al+pick(R,[2,4]),d=ri(R,-3,3);if(be>4)continue;
+    const Bc=-3*(al+be)/2,Cc=3*al*be;const co=cubOf(1,Bc,Cc,d);const fM=fval(co,al),fm=fval(co,be);
+    if(Math.abs(fM)>30||Math.abs(fm)>30||!Number.isInteger(fM)||!Number.isInteger(fm))continue;
+    const k1=B.take(al,1),k2=B.take(be,1),k3=B.take(fM,2),k4=B.take(fm,2),k5=B.take(fm,3),k6=B.take(fM,3);
+    const ex=`x^3${poly(Bc,Cc,d).replace(/x\^2/,'x^2').replace(/^(?!-)/,'+')}`.replace('x^2','x^2');
+    const fx3=poly3(1,Bc,Cc,d);
+    let H=`<p>${T(`関数 $f(x)=${fx3}$ について考える。`)}</p>`;
+    H+=talk([['太郎','グラフ表示ソフトで $y=f(x)$ のグラフと直線 $y=k$ を表示させて，$k$ を動かしながら共有点の個数を数えてみよう。'],['花子','共有点の個数が変わるのは，直線が極大点や極小点を通るときだね。']]);
+    H+=`<p class="sub">(1)　${T("$f'(x)=0$ となる $x$ の値は，小さい順に $x=$")} ${BX(k1)}，${BX(k2)} である。</p>`;
+    H+=`<p class="sub">(2)　${T('$f(x)$ の極大値は')} ${BX(k3)}，${T('極小値は')} ${BX(k4)} である。</p>`;
+    H+=`<p class="sub">(3)　${T('方程式 $f(x)=k$ が異なる3つの実数解をもつような $k$ の値の範囲は')} ${BX(k5)} ${K('<k<')} ${BX(k6)} である。</p>`;
+    const g=graphSVG({w:260,h:170,v:cubView(co),curves:[{f:cubFn(co)}],hl:[fM,fm],yt:[{y:fM,lab:String(fM)},{y:fm,lab:String(fm)}]});
+    const sol=`<h4>(1)</h4><p>${T(`$f'(x)=${poly(3,2*Bc,Cc)}=3(x-(${al}))(x-(${be}))$ より $x=${al},\\ ${be}$。`)}</p><h4>(2)</h4><p>${T(`増減を調べると，$x=${al}$ で極大値 $f(${al})=${fM}$，$x=${be}$ で極小値 $f(${be})=${fm}$。`)}</p><div class="figs">${g}</div><h4>(3)</h4><p>${T(`直線 $y=k$ が極小値と極大値の間にあるとき3点で交わるので $${fm}<k<${fM}$。$k=${fm}$ または $k=${fM}$ のときは接する点があり，解は2個になる。`)}</p>`;
+    return{title:'極値と方程式の解の個数',body:H,subs:[{q:1,check:st('cg',[1,Bc,Cc,d],'o=g')},{q:2,check:st('cg',[1,Bc,Cc,d],'o=g')},{q:3,check:st('cg',[1,Bc,Cc,d],`o=gk&k=${(fM+fm)/2}`)}],sol,meta:{al,be,d,Bc,Cc,fM,fm}};
+  }
+  throw new Error('c2 failed');
+}
+/* C3: OX for operations */
+function cProps(){
+  const D=s=>s.b*s.b-3*s.a*s.c;
+  return[
+   {t:'極値をもつこと',h:s=>D(s)>1e-9,ach:(op,s)=>op==='b'||op==='c'||(op==='a'&&(Math.abs(s.c)>1e-9||Math.abs(s.b)>1e-9)),c:"$f'(x)=0$ が異なる2つの実数解をもつ，つまり $b^2-3ac>0$",num:s=>D(s)>1e-9},
+   {t:'常に増加する（増加関数になる）こと',h:s=>s.a>0&&D(s)<=1e-9,ach:(op,s)=>{if(op==='d')return false;if(op==='c')return s.a>0;if(op==='b')return s.a>0&&s.c>=0;return s.c>0||(Math.abs(s.c)<1e-9&&Math.abs(s.b)<1e-9)},c:'$a>0$ かつ $b^2-3ac\\leqq0$',num:s=>s.a>0&&D(s)<=1e-9},
+   {t:'グラフが原点を通ること',h:s=>Math.abs(s.d)<1e-9,ach:(op,s)=>op==='d',c:'$f(0)=d=0$',num:s=>Math.abs(s.d)<1e-9},
+   {t:'グラフが原点に関して対称になること',h:s=>Math.abs(s.b)<1e-9&&Math.abs(s.d)<1e-9,ach:(op,s)=>(op==='d'&&Math.abs(s.b)<1e-9)||(op==='b'&&Math.abs(s.d)<1e-9),c:'$f(-x)=-f(x)$，つまり $b=0$ かつ $d=0$',num:s=>Math.abs(s.b)<1e-9&&Math.abs(s.d)<1e-9},
+   {t:'$x=1$ で極小値をとること',h:s=>Math.abs(3*s.a+2*s.b+s.c)<1e-9&&6*s.a+2*s.b>1e-9,ach:(op,s)=>{if(op==='d')return false;if(op==='a'){const a=(-2*s.b-s.c)/3;return Math.abs(a)>1e-9&&6*a+2*s.b>1e-9}if(op==='b'){const b=(-3*s.a-s.c)/2;return 6*s.a+2*b>1e-9}const c=-3*s.a-2*s.b;return 6*s.a+2*s.b>1e-9},c:"$f'(1)=3a+2b+c=0$ かつ $x=1$ の前後で $f'(x)$ が負から正に変わる（$f''(1)=6a+2b>0$）",eqx:true},
+  ];
+}
+const OPSC={a:'操作A',b:'操作B',c:'操作C',d:'操作D'};
+function c3(R,B){
+  for(let tries=0;tries<800;tries++){
+    const S={a:pick(R,[1,-1,2]),b:ri(R,-3,3),c:ri(R,-3,3),d:pick(R,[-2,-1,1,2,3])};
+    const PR=cProps();const okp=PR.map((_,i)=>i).filter(i=>!PR[i].h(S));if(okp.length<3)continue;
+    const ps=shuffle(R,okp).slice(0,3),ops=shuffle(R,['a','b','c','d']).slice(0,2);
+    const res=ops.map(op=>ps.map(pi=>PR[pi].ach(op,S)));if(res.some(r=>r.every(x=>x)||r.every(x=>!x)))continue;
+    const idx=res.map(oxIdx);if(idx[0]===idx[1])continue;
+    const ks=idx.map(i=>B.take(i,1));const co=cubOf(S.a,S.b,S.c,S.d);
+    const g=graphSVG({w:190,h:130,v:cubView(co),curves:[{f:cubFn(co)}]});
+    const fig=softFig('v',[{n:'a',val:fx(S.a),pos:60},{n:'b',val:fx(S.b),pos:44},{n:'c',val:fx(S.c),pos:52},{n:'d',val:fx(S.d),pos:66}],g).replace('y=a(x−p)²+q','y=ax³+bx²+cx+d');
+    let H=`<p>${T('3次関数 $f(x)=ax^3+bx^2+cx+d$（$a\\neq0$）のグラフをコンピュータのグラフ表示ソフトを用いて表示させる。最初に，図1のように値を入力した。この状態を [状態X] とする。')}</p><div class="figs"><div>${fig}<div class="figcap">図1</div></div></div>`;
+    H+=`<div class="ops">${['a','b','c','d'].map(op=>`<div>${OPSC[op]}：${T(`[状態X] から $${op}$ の値だけを変化させる。`)}${op==='a'?T('ただし $a\\neq0$ とする。'):''}</div>`).join('')}</div>`;
+    H+=`<p>次の (i)〜(iii) のことが起こり得るかどうかを調べる。起こり得るときは○，起こり得ないときは×で表す。</p><div class="ops">${ps.map((pi,j)=>`<div>(${['i','ii','iii'][j]})　${T(PR[pi].t)}</div>`).join('')}</div>`;
+    H+=ops.map((op,j)=>`<p class="sub">(${j+1})　${OPSC[op]}を行うとき，(i)，(ii)，(iii) の○，×の組合せとして正しいものは ${BX(ks[j])} である。</p>`).join('');
+    H+=`<p>${BX(ks[0])}，${BX(ks[1])} に当てはまるものを，次の⓪〜⑦のうちから一つずつ選べ。ただし，同じものを繰り返し選んでもよい。</p>`+optsBox(OXCH.map(s=>`(i)：${s[0]}　(ii)：${s[1]}　(iii)：${s[2]}`));
+    const sol=`<p>${T(`[状態X] は $a=${S.a},\\ b=${S.b},\\ c=${S.c},\\ d=${S.d}$，$f'(x)=${poly(3*S.a,2*S.b,S.c)}$，$b^2-3ac=${S.b*S.b-3*S.a*S.c}$。`)}</p>`+ps.map((pi,j)=>`<p>(${['i','ii','iii'][j]}) ${T(PR[pi].c)}</p>`).join('')+ops.map((op,j)=>`<h4>${ks[j]}（${OPSC[op]}）</h4><p>${res[j].map((x,i)=>`(${['i','ii','iii'][i]}) ${x?'○':'×'}`).join('　')}　よって ${CIR[idx[j]]}</p>`).join('');
+    return{title:'○×の組合せ',body:H,subs:[{q:1,check:st('cg',[S.a,S.b,S.c,S.d],'o=g')}],sol,meta:{S,ps,ops,ans:idx}};
+  }
+  throw new Error('c3 failed');
+}
+/* C4: choose the formula from the graph */
+function factExpr(a,rs){const m=new Map();for(const r of rs)m.set(r,(m.get(r)||0)+1);return coefTex(a)+[...m].map(([r,n])=>(n>1&&r!==0?factTex(r):factTex(r))+(n>1?'^'+n:'')).join('')}
+function c4(R,B){
+  for(let tries=0;tries<500;tries++){
+    const dbl=R()<0.4;const a=pick(R,[1,-1,2,-2]);let rs;
+    if(dbl){const r=ri(R,-2,2);let s;do{s=ri(R,-3,3)}while(s===r);rs=[r,r,s]}else{rs=shuffle(R,[-3,-2,-1,0,1,2,3]).slice(0,3).sort((u,v)=>u-v)}
+    const co=cubFrom('cf',{fa:a,f1:rs[0],f2:rs[1],f3:rs[2]});if(Math.abs(co.d)>14||Math.abs(co.d)<1e-9)continue;
+    const variants=[[a,rs],[-a,rs],[a,rs.map(r=>-r).sort((u,v)=>u-v)],[2*a,rs],[3*a,rs]];
+    if(dbl){const[r,,s]=rs;variants.push([a,[r,s,s]],[-a,[r,s,s]])}else variants.push([a,[rs[0],rs[0],rs[2]]],[a,[rs[0],rs[1]+1,rs[2]]]);
+    const fns=variants.map(([aa,r3])=>({tex:'y='+factExpr(aa,r3),aa,r3,f:cubFn(cubFrom('cf',{fa:aa,f1:r3[0],f2:r3[1],f3:r3[2]}))}));
+    const pickd=[fns[0]];for(const c of shuffle(R,fns.slice(1))){if(pickd.some(p=>eqFn(p.f,c.f)||p.tex===c.tex))continue;pickd.push(c);if(pickd.length===6)break}
+    if(pickd.length<6)continue;
+    const opts=shuffle(R,pickd);const ans=opts.indexOf(fns[0]);const nroot=new Set(rs).size;
+    const k1=B.take(ans,1),k2=B.take(nroot,2);
+    const uniq=[...new Set(rs)];
+    const g=graphSVG({w:260,h:180,v:cubView(co),curves:[{f:cubFn(co)}],xt:uniq.filter(r=>r!==0).map(r=>({x:r,lab:String(r),up:a*0+fval(co,r+0.3)<0})),pts:[{x:0,y:co.d,lab:String(co.d),dx:5,dy:co.d>0?-4:13},...uniq.map(r=>({x:r,y:0}))]});
+    let H=`<p>${T('3次関数 $y=f(x)$ のグラフをコンピュータのグラフ表示ソフトで表示させたところ，図1のようになった。図には，$x$ 軸との共有点の $x$ 座標と $y$ 切片を示してある。')}</p><div class="figs"><div>${g}<div class="figcap">図1</div></div></div>`;
+    H+=talk([['太郎','$x$ 軸との共有点がわかれば，因数分解した形で表せそうだね。'],['花子','$x$ 軸に接しているところは，重解になっているよ。$y$ 切片で $a$ を確かめよう。']]);
+    H+=`<p class="sub">(1)　${T('図1のグラフを表す式として正しいものは')} ${BX(k1)} である。${BX(k1)} に当てはまるものを，次の⓪〜⑤のうちから一つ選べ。</p>`+optsBox(opts.map(o=>'$'+o.tex+'$'));
+    H+=`<p class="sub">(2)　${T('方程式 $f(x)=0$ の異なる実数解の個数は')} ${BX(k2)} 個である。</p>`;
+    const sol=`<h4>(1)</h4><p>${T(`$x$ 軸との共有点が $x=${uniq.join(',\\ ')}$${dbl?`（$x=${rs[0]}$ では接している）`:''} なので $f(x)=a${factExpr(1,rs)}$ とおける。$y$ 切片が $${co.d}$ なので $a=${fx(a)}$。`)}</p><p>よって ${CIR[ans]}</p><h4>(2)</h4><p>${T(`異なる実数解は $x=${uniq.join(',\\ ')}$ の $${nroot}$ 個。`)}</p>`;
+    return{title:'グラフから式を選ぶ',body:H,subs:[{q:1,check:st('cf',[a,...rs],'o=g')}],sol,meta:{a,rs,ans,opts:opts.map(o=>o.tex),od:opts.map(o=>[o.aa,o.r3]),nroot}};
+  }
+  throw new Error('c4 failed');
+}
+/* C5: locus of extrema */
+function c5(R,B){
+  const k=pick(R,[1,-1,2]),d=ri(R,-2,2);
+  const tex=`${coefTex(k)}x^3${-3*k>0?'+':'-'}${Math.abs(3*k)}ax${d?(d>0?'+':'-')+Math.abs(d):''}`;
+  const dir=k>0?2:0;
+  const kA=B.take(0,1),kB=B.take(-2*k,2),kC=B.take(d,2),kD=B.take(dir,3);
+  const co1=cubOf(k,0,-3*k*1,d),co2=cubOf(k,0,-3*k*2,d);
+  const L=-1.8,Rr=1.8;const loc=x=>-2*k*x*x*x+d;
+  const g=graphSVG({w:250,h:170,v:[-2.6,2.6,d-7,d+7],curves:[{f:cubFn(cubOf(k,0,-3*k*0.5,d)),cls:'cv2'},{f:cubFn(co1),cls:'cv2'},{f:cubFn(co2),cls:'cv2'},{f:loc,cls:'cvd'}],pts:[0.5,1,2].flatMap(a=>cubExt(cubOf(k,0,-3*k*a,d)).map(e=>({x:e.x,y:e.y})))});
+  let H=`<p>${T(`$a$ を定数として，関数 $f(x)=${tex}$ のグラフをコンピュータのグラフ表示ソフトで表示させる。$a$ の値をいろいろに変えたところ，図1のように極大点と極小点が点線の曲線の上を動いた。`)}</p><div class="figs"><div>${g}<div class="figcap">図1</div></div></div>`;
+  H+=talk([['太郎','$a$ によっては極値がなくなるみたいだね。'],['花子','極値をとる点の座標を $a$ で表してから $a$ を消去すれば，点線の曲線の式がわかりそう。']]);
+  H+=`<p class="sub">(1)　${T('$f(x)$ が極値をもつような $a$ の値の範囲は $a>$')} ${BX(kA)} である。</p>`;
+  H+=`<p class="sub">(2)　${T('極大点と極小点は，どちらも曲線')} ${K(`y=${BT(kB)}x^3+${BT(kC)}`)} の上にある。</p>`;
+  H+=`<p class="sub">(3)　${T('$a$ の値を大きくしていくとき，極大点は')} ${BX(kD)} ${T('へ向かって動く。')}${BX(kD)} に当てはまるものを，次の⓪〜③のうちから一つ選べ。</p>`+optsBox(DIRCH,'four');
+  const sol=`<h4>(1)</h4><p>${T(`$f'(x)=${3*k}x^2-${3*k}a=${3*k}(x^2-a)$。極値をもつのは $f'(x)=0$ が異なる2つの実数解をもつとき，つまり $a>0$。`)}</p><h4>(2)</h4><p>${T(`$x=\\pm\\sqrt{a}$ で極値をとる。$a=x^2$ を $y=${tex}$ に代入すると $y=${k}x^3-${3*k}x^3${d?(d>0?'+':'-')+Math.abs(d):''}=${-2*k}x^3${d?(d>0?'+':'-')+Math.abs(d):''}$。`)}</p><h4>(3)</h4><p>${T(`極大点は $x=${k>0?'-':''}\\sqrt{a}$（${k>0?'$x^3$ の係数が正なので左側':'$x^3$ の係数が負なので右側'}）。$a$ が大きくなると $x$ は${k>0?'小さく（左へ）':'大きく（右へ）'}なり，極大値は大きく（上へ）なる。`)}</p><p>よって ${CIR[dir]}</p>`;
+  return{title:'極値の動き（会話文）',body:H,subs:[{q:1,check:st('cg',[k,0,-3*k,d],'o=gt')}],sol,meta:{k,d,dir}};
+}
+const GENS_C={1:c1,2:c2,3:c3,4:c4,5:c5};
+function selfTestC(n=150){
+  const out=[];let bad=0;const near=(x,y)=>Math.abs(x-y)<1e-6;
+  for(let t=1;t<=5;t++){let ok=0;const errs=[];
+    for(let s=1;s<=n;s++){try{
+      const p=gen('cubic',t,s),q=gen('cubic',t,s);if(JSON.stringify(p.blanks)!==JSON.stringify(q.blanks))throw 'not deterministic';
+      if(!p.blanks.length||p.blanks.some(b=>!/^[-0-9]$/.test(b.a)))throw 'bad blank';const m=p.meta,A=p.blanks.map(b=>b.a).join('');
+      if(t===1){const co=cubOf(m.a,m.b,m.c,m.d);const big=fval(co,100)>0;const ex=cubExt(co);const sum=ex[0].x+ex[1].x;const slope=(fval(co,1e-5)-fval(co,-1e-5))/2e-5;
+        const i1=(big?0:2)+(fval(co,0)>0?0:1),bpos=(sum>0)!==(m.a>0)?true:false;const i2=(bpos?0:2)+(slope>0?0:1);if(i1!==m.i1||i2!==m.i2)throw 'signs'}
+      if(t===2){const co=cubOf(1,m.Bc,m.Cc,m.d);const ex=cubExt(co);if(!near(ex[0].x,m.al)||!near(ex[1].x,m.be)||!near(ex[0].y,m.fM)||!near(ex[1].y,m.fm))throw 'ext';
+        const cnt=k=>cubRoots(co,k,-1e3,1e3).length;if(cnt((m.fM+m.fm)/2)!==3||cnt(m.fM+0.01)!==1||cnt(m.fm-0.01)!==1||cnt(m.fM)!==2||cnt(m.fm)!==2)throw 'count';
+        if(A!==[m.al,m.be,m.fM,m.fm,m.fm,m.fM].join(''))throw 'blank'}
+      if(t===3){const S=m.S,PR=cProps();const grid={a:[],b:[],c:[],d:[]};for(let i=-1000;i<=1000;i++){if(i)grid.a.push(i/100)}for(let i=-2000;i<=2000;i++){grid.b.push(i/100);grid.c.push(i/100);grid.d.push(i/100)}
+        m.ops.forEach((op,j)=>{const r=m.ps.map(pi=>{const pr=PR[pi];if(pr.eqx){let prev=null,pv=null;for(const v of grid[op]){const s2={...S,[op]:v};const g=3*s2.a+2*s2.b+s2.c;if(prev!==null&&(prev*g<0||Math.abs(g)<1e-12)&&!(op==='a'&&pv<0&&v>0)){const vv=Math.abs(g)<1e-12?v:pv-prev*(v-pv)/(g-prev);const s3={...S,[op]:vv};if(6*s3.a+2*s3.b>1e-6)return true}prev=g;pv=v}return false}
+          return grid[op].some(v=>pr.num({...S,[op]:v}))});if(oxIdx(r)!==m.ans[j])throw 'ox '+op+' '+r.join()})}
+      if(t===4){const co=cubFrom('cf',{fa:m.a,f1:m.rs[0],f2:m.rs[1],f3:m.rs[2]});const rs=cubRoots(co,0,-50,50);if(rs.length!==m.nroot)throw 'nroot';
+        if(m.opts.length!==6||new Set(m.opts).size!==6)throw 'dup';const hits=m.od.map(([aa,r3],i)=>{const c2=cubFrom('cf',{fa:aa,f1:r3[0],f2:r3[1],f3:r3[2]});return eqFn(cubFn(c2),cubFn(co))?i:-1}).filter(i=>i>=0);if(hits.join()!==String(m.ans))throw 'answer set';
+        if(!near(co.d,fval(co,0)))throw 'yint'}
+      if(t===5){const{k,d}=m;for(const a of[0.3,1,2.5]){const co=cubOf(k,0,-3*k*a,d);const ex=cubExt(co);if(ex.length!==2)throw 'ext';for(const e of ex)if(!near(e.y,-2*k*e.x**3+d))throw 'locus'}
+        if(cubExt(cubOf(k,0,3*k,d)).length)throw 'a<0';const mx=a=>cubExt(cubOf(k,0,-3*k*a,d)).find(e=>e.type==='max');const p0=mx(1),p1=mx(1.1);if(dirIdx(p1.x-p0.x,p1.y-p0.y)!==m.dir)throw 'dir'}
+      ok++}catch(e){bad++;if(errs.length<3)errs.push(`seed ${s}: ${e}`)}}
+    out.push(`型${t}: ${ok}/${n} 合格`+(errs.length?'  '+errs.join(' / '):''))}
+  return{text:out.join('\n'),bad};
+}
+const PREDC=[
+ {q:'$y=ax^3+bx^2+cx+d$ で，$a=1$，$b=0$，$c=-3$ のまま，$d$ だけを $0$ から $2$ に変える。極大点はどこへ移動するか。',i:['cg',[1,0,-3,0]],t:['cg',[1,0,-3,2]],kind:'tap'},
+ {q:'$y=a(x-p)^3+m(x-p)+q$ で，$a=1$，$m=-3$，$q=0$ のまま，$p$ だけを $0$ から $2$ に変える。極大点はどこへ移動するか。',i:['cv',[1,-3,0,0]],t:['cv',[1,-3,2,0]],kind:'tap'},
+ {q:'$y=a(x-p)^3+m(x-p)+q$ で，$a=1$，$m=-3$，$p=0$ のまま，$q$ だけを $0$ から $-1$ に変える。極大点はどこへ移動するか。',i:['cv',[1,-3,0,0]],t:['cv',[1,-3,0,-1]],kind:'tap'},
+ {q:'$y=ax^3+bx^2+cx+d$ で，$b=0$，$c=-3$，$d=0$ のまま，$a$ だけを $1$ から $\\dfrac{1}{4}$ に変える。極大点はどこへ移動するか。',i:['cg',[1,0,-3,0]],t:['cg',[0.25,0,-3,0]],kind:'tap'},
+ {q:'$y=a(x-\\alpha)(x-\\beta)(x-\\gamma)$ で，$\\alpha=-2$，$\\beta=0$，$\\gamma=2$ のまま，$a$ だけを $1$ から $-1$ に変える。極大点はどこへ移動するか。',i:['cf',[1,-2,0,2]],t:['cf',[-1,-2,0,2]],kind:'tap'},
+ {q:'$y=ax^3+bx^2+cx+d$ で，$a=1$，$b=0$，$d=0$ のまま，$c$ だけを $-3$ から $3$ に変える。極値はどうなるか。',i:['cg',[1,0,-3,0]],t:['cg',[1,0,3,0]],kind:'choice',ch:['極大・極小の2つのまま','極大だけになる','極値をもたなくなる','極値が3つになる'],ans:2},
+ {q:'$y=ax^3+bx^2+cx+d$ で，$a=1$，$b=0$，$c=-3$ のまま，$d$ を $0$ から大きくしていく。$x$ 軸との共有点が2個になるのは $d$ がいくつのときか。',i:['cg',[1,0,-3,0]],t:['cg',[1,0,-3,2]],kind:'choice',ch:['$1$','$2$','$3$','$4$'],ans:1},
+ {q:'$y=a(x-\\alpha)(x-\\beta)(x-\\gamma)$ で，$a=1$，$\\alpha=-2$，$\\beta=0$ のまま，$\\gamma$ だけを $2$ から $0$ に変える。$x$ 軸との共有点の様子はどうなるか。',i:['cf',[1,-2,0,2]],t:['cf',[1,-2,0,0]],kind:'choice',ch:['3点で交わる','$x=0$ で接し，$x=-2$ で交わる','1点だけで交わる','共有点をもたない'],ans:1},
+ {q:'$y=x^3$ の $c$（$x$ の係数）を $0$ から $3$ に変える（$y=x^3+3x$）。グラフの様子はどうなるか。',i:['cg',[1,0,0,0]],t:['cg',[1,0,3,0]],kind:'choice',ch:['常に増加する','極値を2つもつ','常に減少する','極大値だけをもつ'],ans:0},
+ {q:'$y=ax^3+bx^2+cx+d$ で，$a=1$，$b=-3$，$c=0$ のまま，$d$ を $0$ から $4$ に変える。方程式 $f(x)=0$ の異なる実数解はいくつになるか。',i:['cg',[1,-3,0,0]],t:['cg',[1,-3,0,4]],kind:'choice',ch:['$1$ 個','$2$ 個','$3$ 個','$0$ 個'],ans:1},
+];
+/* ================= conic worksheets ================= */
+function conView(co,extra=[]){const pts=conPaths(co).flat().filter(p=>Math.abs(p[0])<9&&Math.abs(p[1])<9);return fitView(pts.concat(extra).concat([[0,0]]),0.12)}
+const sqTex=(v,x)=>Math.abs(v)<1e-9?x+'^2':`(${x}${v>0?'-':'+'}${Math.abs(v)})^2`;
+/* K1: equation and foci from the graph */
+function k1(R,B){
+  for(let tries=0;tries<300;tries++){
+    const hyp=R()<0.4;let a=ri(R,2,5),b=ri(R,1,4);if(a===b)continue;const h=ri(R,-2,2),k=ri(R,-2,2);
+    if(hyp&&a>4)continue;
+    const co=hyp?conOf('hy',{ha:a,hb:b,hh:h,hk:k,hs:1}):conOf('el',{ea:a,eb:b,eh:h,ek:k});
+    const C=hyp?a*a+b*b:Math.abs(a*a-b*b);const horiz=hyp||a>b;
+    const vt=hyp?[[h+a,k],[h-a,k]]:[[h+a,k],[h-a,k],[h,k+b],[h,k-b]];
+    const g=graphSVG({w:280,h:200,v:hyp?[h-a-4,h+a+4,k-4,k+4]:conView(co),paths:conPaths(co),pts:[...vt.map(([x,y])=>({x,y,lab:`(${x}, ${y})`,dx:4,dy:-5})),{x:h,y:k}],lines:hyp?[[h-20,k-20*b/a,h+20,k+20*b/a],[h-20,k+20*b/a,h+20,k-20*b/a]]:[]});
+    const kH=B.take(h,1),kA=B.take(a*a,1),kK=B.take(k,1),kB=B.take(b*b,1),kC=B.take(C,2);
+    const kind=hyp?'双曲線':'楕円';
+    let H=`<p>${T(`${kind}をコンピュータのグラフ表示ソフトで表示させたところ，図1のようになった。図には${hyp?'頂点の座標と中心を示し，破線は漸近線で，その傾きは $\\pm\\dfrac{'+b+'}{'+a+'}$ である':'4つの頂点の座標を示してある'}。`)}</p><div class="figs"><div>${g}<div class="figcap">図1</div></div></div>`;
+    H+=talk([['太郎',hyp?'中心と頂点の位置，漸近線の傾きから $a$ と $b$ がわかるね。':'中心は頂点の真ん中だね。横と縦の半径から $a$ と $b$ がわかる。'],['花子','焦点の位置は，楕円と双曲線で $c$ の求め方がちがうから気をつけよう。']]);
+    H+=`<p class="sub">(1)　${T('この曲線の方程式は')} ${K(`\\dfrac{(x-${BT(kH)})^2}{${BT(kA)}}${hyp?'-':'+'}\\dfrac{(y-${BT(kK)})^2}{${BT(kB)}}=1`)} である。</p>`;
+    H+=`<p class="sub">(2)　${T('焦点の座標は')} ${horiz?K(`\\left(${h}\\pm\\sqrt{${BT(kC)}},\\ ${k}\\right)`):K(`\\left(${h},\\ ${k}\\pm\\sqrt{${BT(kC)}}\\right)`)} である。</p>`;
+    const sol=`<h4>(1)</h4><p>${T(`中心は $(${h},\\ ${k})$。$x$ 方向の半径（頂点までの距離）が $${a}$，${hyp?`漸近線の傾き $\\dfrac{b}{a}=\\dfrac{${b}}{${a}}$ より $b=${b}$`:`$y$ 方向の半径が $${b}$`}。よって $a^2=${a*a},\\ b^2=${b*b}$。`)}</p><h4>(2)</h4><p>${T(hyp?`双曲線では $c^2=a^2+b^2=${C}$。焦点は中心から $x$ 方向に $\\pm\\sqrt{${C}}$。`:`楕円では $c^2=${a>b?'a^2-b^2':'b^2-a^2'}=${C}$。焦点は長軸（${a>b?'$x$':'$y$'} 方向）上にある。`)}</p>`;
+    return{title:'グラフから楕円・双曲線の式',body:H,subs:[{q:1,check:hyp?st('hy',[a,b,h,k,1],'o=g'):st('el',[a,b,h,k],'o=g')}],sol,meta:{hyp,a,b,h,k,C,horiz}};
+  }
+  throw new Error('k1 failed');
+}
+/* K2: general form -> standard form */
+function k2(R,B){
+  for(let tries=0;tries<300;tries++){
+    const hyp=R()<0.5;const A2=pick(R,[1,4,9]),B2=pick(R,[1,4,9]);if(A2===B2)continue;const h=ri(R,-3,3),k=ri(R,-3,3);if(!h||!k)continue;
+    /* b2 x-term: (x-h)^2/A2 +/- (y-k)^2/B2 = 1  ->  B2 (x-h)^2 +/- A2 (y-k)^2 = A2 B2 */
+    const sg=hyp?-1:1;const cx2=B2,cy2=sg*A2,cx=-2*B2*h,cy=-2*sg*A2*k,c0=B2*h*h+sg*A2*k*k-A2*B2;
+    const gtex=`${cx2===1?'':cx2}x^2${cy2<0?'-':'+'}${Math.abs(cy2)===1?'':Math.abs(cy2)}y^2${cx<0?'-':'+'}${Math.abs(cx)}x${cy<0?'-':'+'}${Math.abs(cy)}y${c0===0?'':(c0<0?'-':'+')+Math.abs(c0)}=0`;
+    const kh=B.take(h,1),kk=B.take(k,1),ka=B.take(A2,1),kb=B.take(B2,1),kt=B.take(hyp?1:0,2);
+    let H=`<p>${T(`方程式 $${gtex}$ が表す図形を，グラフ表示ソフトを使って調べる。`)}</p>`;
+    H+=talk([['太郎','$x$ と $y$ のそれぞれについて平方完成すれば，標準形になりそうだ。'],['花子','標準形になれば，どの曲線をどれだけ平行移動したものかがわかるね。']]);
+    H+=`<p class="sub">(1)　${T('この方程式は')} ${K(`\\dfrac{(x-${BT(kh)})^2}{${BT(ka)}}${hyp?'-':'+'}\\dfrac{(y-${BT(kk)})^2}{${BT(kb)}}=1`)} ${T('と変形できる。')}</p>`;
+    H+=`<p class="sub">(2)　${T('この方程式が表す図形は')} ${BX(kt)} ${T('を，$x$ 軸方向に $h$，$y$ 軸方向に $k$ だけ平行移動したものである（$h,\\ k$ は (1) の値）。')}${BX(kt)} に当てはまるものを，次の⓪〜③のうちから一つ選べ。</p>`+optsBox([`楕円 $\\dfrac{x^2}{${A2}}+\\dfrac{y^2}{${B2}}=1$`,`双曲線 $\\dfrac{x^2}{${A2}}-\\dfrac{y^2}{${B2}}=1$`,`楕円 $\\dfrac{x^2}{${B2}}+\\dfrac{y^2}{${A2}}=1$`,`双曲線 $\\dfrac{x^2}{${B2}}-\\dfrac{y^2}{${A2}}=1$`]);
+    const sol=`<h4>(1)</h4><p>${T(`$${cx2===1?'':cx2}(x${-2*h<0?'-':'+'}${Math.abs(2*h)}x)$ と $y$ の部分をそれぞれ平方完成すると $${B2}(x-(${h}))^2${hyp?'-':'+'}${A2}(y-(${k}))^2=${A2*B2}$。両辺を $${A2*B2}$ で割る。`)}</p><h4>(2)</h4><p>${T(`中心 $(${h},\\ ${k})$ の${hyp?'双曲線':'楕円'}で，$\\dfrac{x^2}{${A2}}${hyp?'-':'+'}\\dfrac{y^2}{${B2}}=1$ を平行移動したもの。`)}</p><p>よって ${CIR[hyp?1:0]}</p>`;
+    return{title:'平行移動と標準形（会話文）',body:H,subs:[{q:1,check:hyp?st('hy',[Math.sqrt(A2),Math.sqrt(B2),h,k,1],'o=g'):st('el',[Math.sqrt(A2),Math.sqrt(B2),h,k],'o=g')}],sol,meta:{hyp,A2,B2,h,k,cx2,cy2,cx,cy,c0}};
+  }
+  throw new Error('k2 failed');
+}
+/* K3: parametric */
+const THCH=['$0$','$\\dfrac{\\pi}{2}$','$\\pi$','$\\dfrac{3}{2}\\pi$'];
+function k3(R,B){
+  for(let tries=0;tries<300;tries++){
+    const a=ri(R,1,4),b=ri(R,1,4),h=ri(R,-2,2),k=ri(R,-2,2);if(a===b)continue;
+    const ti=ri(R,0,3);const th=ti/2;const Pt=[h+a*Math.round(Math.cos(th*PI)),k+b*Math.round(Math.sin(th*PI))];
+    const dirAns=0;
+    const kh=B.take(h,1),ka=B.take(a*a,1),kk=B.take(k,1),kb=B.take(b*b,1),kt=B.take(ti,2),kd=B.take(dirAns,3);
+    const xt=`${a===1?'':a}\\cos\\theta${h?(h>0?'+':'-')+Math.abs(h):''}`,yt=`${b===1?'':b}\\sin\\theta${k?(k>0?'+':'-')+Math.abs(k):''}`;
+    let H=`<p>${T(`媒介変数 $\\theta$ を用いて $x=${xt}$，$y=${yt}$ と表される点 P を考える。グラフ表示ソフトで $\\theta$ を $0$ から $2\\pi$ まで動かすと，点 P は1つの曲線をえがいた。`)}</p>`;
+    H+=talk([['太郎','$\\cos\\theta$ と $\\sin\\theta$ を $x,\\ y$ で表して，$\\cos^2\\theta+\\sin^2\\theta=1$ を使えば $\\theta$ を消去できるね。'],['花子','$\\theta$ を増やしたとき，P がどちら回りに動くかも確かめよう。']]);
+    H+=`<p class="sub">(1)　${T('点 P のえがく曲線の方程式は')} ${K(`\\dfrac{(x-${BT(kh)})^2}{${BT(ka)}}+\\dfrac{(y-${BT(kk)})^2}{${BT(kb)}}=1`)} である。</p>`;
+    H+=`<p class="sub">(2)　${T(`点 P が $(${Pt[0]},\\ ${Pt[1]})$ にあるとき，$0\\leqq\\theta<2\\pi$ の範囲で $\\theta=$`)} ${BX(kt)} である。${BX(kt)} に当てはまるものを，次の⓪〜③のうちから一つ選べ。</p>`+optsBox(THCH,'four');
+    H+=`<p class="sub">(3)　${T('$\\theta$ が増加するとき，点 P は')} ${BX(kd)} ${T('に動く。')}${BX(kd)} に当てはまるものを，次の⓪〜①のうちから一つ選べ。</p>`+optsBox(['中心のまわりを反時計回り','中心のまわりを時計回り']);
+    const sol=`<h4>(1)</h4><p>${T(`$\\cos\\theta=\\dfrac{x-(${h})}{${a}}$，$\\sin\\theta=\\dfrac{y-(${k})}{${b}}$ を $\\cos^2\\theta+\\sin^2\\theta=1$ に代入する。`)}</p><h4>(2)</h4><p>${T(`$${Pt[0]}=${a}\\cos\\theta+(${h})$，$${Pt[1]}=${b}\\sin\\theta+(${k})$ より $\\cos\\theta=${Math.round(Math.cos(th*PI))},\\ \\sin\\theta=${Math.round(Math.sin(th*PI))}$。`)}</p><p>よって ${CIR[ti]}</p><h4>(3)</h4><p>${T('$\\theta=0$ で右端，$\\theta=\\dfrac{\\pi}{2}$ で上端に来るので反時計回り。')}</p>`;
+    return{title:'媒介変数表示',body:H,subs:[{q:1,check:st('pm',[a,b,h,k,th],'o=gt')}],sol,meta:{a,b,h,k,ti,Pt}};
+  }
+  throw new Error('k3 failed');
+}
+/* K4: polar equation */
+const KINDCH=['円','楕円','放物線','双曲線'];
+function k4(R,B){
+  for(let tries=0;tries<300;tries++){
+    const e=pick(R,[0.5,1,2]),l=pick(R,[1,2,3,4]);const kind=e<1?1:e===1?2:3;
+    /* (1-e^2)x^2 - 2el x + y^2 = l^2, scale so integer */
+    const sc=e===0.5?4:1;const X2=(1-e*e)*sc,X1=-2*e*l*sc,Y2=sc,C0=l*l*sc;
+    if([X2,X1,Y2,C0].some(v=>!Number.isInteger(v)))continue;
+    const k1b=B.take(kind,1),kx2=B.take(X2,2),kx1=B.take(X1,2),ky2=B.take(Y2,2),kc=B.take(C0,2);
+    const etex=e===0.5?'\\dfrac{1}{2}':String(e);
+    const den=e===0.5?`2-\\cos\\theta`:`1-${e===1?'':e}\\cos\\theta`;const num=e===0.5?2*l:l;
+    let H=`<p>${T(`極方程式 $r=\\dfrac{${num}}{${den}}$ が表す曲線を，グラフ表示ソフトで調べる。ただし，極を原点，始線を $x$ 軸の正の部分とする。`)}</p>`;
+    H+=talk([['太郎','分母と分子を $2$ で割ると $r=\\dfrac{\\ell}{1-e\\cos\\theta}$ の形になるものもあるね。'],['花子','$r\\cos\\theta=x$，$r^2=x^2+y^2$ を使えば，$x,\\ y$ の式に直せるよ。']]);
+    H+=`<p class="sub">(1)　${T('この曲線は')} ${BX(k1b)} ${T('である。')}${BX(k1b)} に当てはまるものを，次の⓪〜③のうちから一つ選べ。</p>`+optsBox(KINDCH,'four');
+    H+=`<p class="sub">(2)　${T('この曲線を直交座標の方程式で表すと')} ${K(`${BT(kx2)}x^2+${BT(kx1)}x+${BT(ky2)}y^2=${BT(kc)}`)} である。</p>`;
+    const sol=`<h4>(1)</h4><p>${T(`$r=\\dfrac{${l}}{1-${etex}\\cos\\theta}$ で，離心率 $e=${etex}$。${e<1?'$e<1$ なので楕円':e===1?'$e=1$ なので放物線':'$e>1$ なので双曲線'}。`)}</p><p>よって ${CIR[kind]}</p><h4>(2)</h4><p>${T(`$r-${etex}\\,r\\cos\\theta=${l}$ より $r=${etex}x+${l}$。両辺を2乗して $x^2+y^2=(${etex}x+${l})^2$。整理すると $${fx(1-e*e)}x^2${-2*e*l<0?'-':'+'}${Math.abs(2*e*l)}x+y^2=${l*l}$${sc>1?`，両辺を $${sc}$ 倍する`:''}。`)}</p>`;
+    return{title:'極方程式',body:H,subs:[{q:1,check:st('po',[e,l],'o=g')}],sol,meta:{e,l,kind,X2,X1,Y2,C0}};
+  }
+  throw new Error('k4 failed');
+}
+/* K5: OX for ellipse operations */
+function kProps(){
+  const f0=s=>s.h*s.h/(s.a*s.a)+s.k*s.k/(s.b*s.b)-1;
+  return[
+   {t:'円になること',h:s=>Math.abs(s.a-s.b)<1e-9,ach:(op,s)=>op==='a'||op==='b',c:'$a=b$ のとき円',num:s=>Math.abs(s.a-s.b)<1e-9},
+   {t:'焦点が2つとも $x$ 軸上にあること',h:s=>Math.abs(s.k)<1e-9&&s.a>s.b+1e-9,ach:(op,s)=>{if(op==='k')return s.a>s.b+1e-9;if(op==='h')return false;return Math.abs(s.k)<1e-9},c:'長軸が $x$ 軸上，つまり $k=0$ かつ $a>b$',num:s=>Math.abs(s.k)<1e-9&&s.a>s.b+1e-9},
+   {t:'曲線が原点を通ること',h:s=>Math.abs(f0(s))<1e-9,ach:(op,s)=>{if(op==='a')return Math.abs(s.h)>1e-9&&Math.abs(s.k)<s.b-1e-9;if(op==='b')return Math.abs(s.k)>1e-9&&Math.abs(s.h)<s.a-1e-9;if(op==='h')return Math.abs(s.k)<=s.b+1e-9;return Math.abs(s.h)<=s.a+1e-9},c:'$\\dfrac{h^2}{a^2}+\\dfrac{k^2}{b^2}=1$',g:s=>f0(s),eq:true},
+   {t:'曲線が $y$ 軸に接すること',h:s=>Math.abs(Math.abs(s.h)-s.a)<1e-9,ach:(op,s)=>(op==='a'&&Math.abs(s.h)>1e-9)||op==='h',c:'中心から $y$ 軸までの距離 $|h|$ が $a$ に等しい',g:s=>Math.abs(s.h)-s.a,eq:true},
+   {t:'長軸の長さが $8$ になること',h:s=>Math.abs(2*Math.max(s.a,s.b)-8)<1e-9,ach:(op,s)=>(op==='a'&&s.b<=4+1e-9)||(op==='b'&&s.a<=4+1e-9),c:'長軸の長さは $2\\max(a,\\ b)$',num:s=>Math.abs(2*Math.max(s.a,s.b)-8)<1e-9},
+  ];
+}
+const OPSK={a:'操作A',b:'操作B',h:'操作H',k:'操作K'};
+function k5(R,B){
+  for(let tries=0;tries<800;tries++){
+    const S={a:ri(R,1,5),b:ri(R,1,5),h:ri(R,-3,3),k:ri(R,-3,3)};if(S.a===S.b)continue;
+    const PR=kProps();const okp=PR.map((_,i)=>i).filter(i=>!PR[i].h(S));if(okp.length<3)continue;
+    const ps=shuffle(R,okp).slice(0,3),ops=shuffle(R,['a','b','h','k']).slice(0,2);
+    const res=ops.map(op=>ps.map(pi=>PR[pi].ach(op,S)));if(res.some(r=>r.every(x=>x)||r.every(x=>!x)))continue;
+    const idx=res.map(oxIdx);if(idx[0]===idx[1])continue;
+    const ks=idx.map(i=>B.take(i,1));const co=conOf('el',{ea:S.a,eb:S.b,eh:S.h,ek:S.k});
+    const g=graphSVG({w:190,h:140,v:conView(co),paths:conPaths(co)});
+    const fig=softFig('v',[{n:'a',val:S.a,pos:60},{n:'b',val:S.b,pos:44},{n:'h',val:S.h,pos:52},{n:'k',val:S.k,pos:66}],g).replace('y=a(x−p)²+q','(x−h)²/a²+(y−k)²/b²=1');
+    let H=`<p>${T('楕円 $\\dfrac{(x-h)^2}{a^2}+\\dfrac{(y-k)^2}{b^2}=1$（$a>0,\\ b>0$）をコンピュータのグラフ表示ソフトを用いて表示させる。最初に，図1のように値を入力した。この状態を [状態X] とする。')}</p><div class="figs"><div>${fig}<div class="figcap">図1</div></div></div>`;
+    H+=`<div class="ops">${['a','b','h','k'].map(op=>`<div>${OPSK[op]}：${T(`[状態X] から $${op}$ の値だけを変化させる。`)}${op==='a'||op==='b'?T(`ただし $${op}>0$ とする。`):''}</div>`).join('')}</div>`;
+    H+=`<p>次の (i)〜(iii) のことが起こり得るかどうかを調べる。起こり得るときは○，起こり得ないときは×で表す。</p><div class="ops">${ps.map((pi,j)=>`<div>(${['i','ii','iii'][j]})　${T(PR[pi].t)}</div>`).join('')}</div>`;
+    H+=ops.map((op,j)=>`<p class="sub">(${j+1})　${OPSK[op]}を行うとき，(i)，(ii)，(iii) の○，×の組合せとして正しいものは ${BX(ks[j])} である。</p>`).join('');
+    H+=`<p>${BX(ks[0])}，${BX(ks[1])} に当てはまるものを，次の⓪〜⑦のうちから一つずつ選べ。ただし，同じものを繰り返し選んでもよい。</p>`+optsBox(OXCH.map(s=>`(i)：${s[0]}　(ii)：${s[1]}　(iii)：${s[2]}`));
+    const sol=`<p>${T(`[状態X] は $a=${S.a},\\ b=${S.b},\\ h=${S.h},\\ k=${S.k}$。`)}</p>`+ps.map((pi,j)=>`<p>(${['i','ii','iii'][j]}) ${T(PR[pi].c)}</p>`).join('')+ops.map((op,j)=>`<h4>${ks[j]}（${OPSK[op]}）</h4><p>${res[j].map((x,i)=>`(${['i','ii','iii'][i]}) ${x?'○':'×'}`).join('　')}　よって ${CIR[idx[j]]}</p>`).join('');
+    return{title:'○×の組合せ',body:H,subs:[{q:1,check:st('el',[S.a,S.b,S.h,S.k],'o=g')}],sol,meta:{S,ps,ops,ans:idx}};
+  }
+  throw new Error('k5 failed');
+}
+const GENS_K={1:k1,2:k2,3:k3,4:k4,5:k5};
+function selfTestK(n=150){
+  const out=[];let bad=0;const near=(x,y)=>Math.abs(x-y)<1e-6;
+  for(let t=1;t<=5;t++){let ok=0;const errs=[];
+    for(let s=1;s<=n;s++){try{
+      const p=gen('conic',t,s),q=gen('conic',t,s);if(JSON.stringify(p.blanks)!==JSON.stringify(q.blanks))throw 'not deterministic';
+      if(!p.blanks.length||p.blanks.some(b=>!/^[-0-9]$/.test(b.a)))throw 'bad blank';const m=p.meta,A=p.blanks.map(b=>b.a).join('');
+      if(t===1){const co=m.hyp?conOf('hy',{ha:m.a,hb:m.b,hh:m.h,hk:m.k,hs:1}):conOf('el',{ea:m.a,eb:m.b,eh:m.h,ek:m.k});
+        for(const[x,y]of conPaths(co).flat().slice(0,50)){const v=(x-m.h)**2/(m.a*m.a)+(m.hyp?-1:1)*(y-m.k)**2/(m.b*m.b);if(Math.abs(v-1)>1e-6)throw 'on curve'}
+        const F=conFoci(co);const d=pt=>Math.hypot(pt[0]-F[0][0],pt[1]-F[0][1])+(m.hyp?-1:1)*Math.hypot(pt[0]-F[1][0],pt[1]-F[1][1]);const L=conPaths(co)[0];const v0=Math.abs(d(L[10])),v1=Math.abs(d(L[77]));if(!near(v0,v1))throw 'focus property';
+        if(!near((F[0][0]-m.h)**2+(F[0][1]-m.k)**2,m.C))throw 'C'}
+      if(t===2){const sg=m.hyp?-1:1;for(const u of[0.3,1.1,2.5]){let x,y;if(m.hyp){x=m.h+Math.sqrt(m.A2)*Math.cosh(u);y=m.k+Math.sqrt(m.B2)*Math.sinh(u)}else{x=m.h+Math.sqrt(m.A2)*Math.cos(u);y=m.k+Math.sqrt(m.B2)*Math.sin(u)}
+        const g=m.cx2*x*x+m.cy2*y*y+m.cx*x+m.cy*y+m.c0;if(Math.abs(g)>1e-6)throw 'general'}}
+      if(t===3){const th=m.ti/2*PI;if(!near(m.h+m.a*Math.cos(th),m.Pt[0])||!near(m.k+m.b*Math.sin(th),m.Pt[1]))throw 'point';
+        const P1={x:m.a*Math.cos(0.1),y:m.b*Math.sin(0.1)},P0={x:m.a,y:0};if(P0.x*P1.y-P0.y*P1.x<=0)throw 'dir'}
+      if(t===4){const co=conOf('po',{oe:m.e,ol:m.l});for(const[x,y]of conPaths(co).flat().filter((_,i)=>i%97===0)){const g=m.X2*x*x+m.X1*x+m.Y2*y*y-m.C0;if(Math.abs(g)>1e-6*Math.max(1,x*x+y*y))throw 'polar'}if((m.e<1?1:m.e===1?2:3)!==m.kind)throw 'kind'}
+      if(t===5){const S=m.S,PR=kProps();const grid={a:[],b:[],h:[],k:[]};for(let i=1;i<=1500;i++){grid.a.push(i/100);grid.b.push(i/100)}for(let i=-1500;i<=1500;i++){grid.h.push(i/100);grid.k.push(i/100)}
+        m.ops.forEach((op,j)=>{const r=m.ps.map(pi=>{const pr=PR[pi];if(pr.eq){let prev=null;for(const v of grid[op]){const g=pr.g({...S,[op]:v});if(Math.abs(g)<1e-9)return true;if(prev!==null&&prev*g<0)return true;prev=g}return false}return grid[op].some(v=>pr.num({...S,[op]:v}))});if(oxIdx(r)!==m.ans[j])throw 'ox '+op+' '+r.join()})}
+      ok++}catch(e){bad++;if(errs.length<3)errs.push(`seed ${s}: ${e}`)}}
+    out.push(`型${t}: ${ok}/${n} 合格`+(errs.length?'  '+errs.join(' / '):''))}
+  return{text:out.join('\n'),bad};
+}
+const PREDK=[
+ {q:'楕円 $\\dfrac{(x-h)^2}{a^2}+\\dfrac{(y-k)^2}{b^2}=1$ で，$a=3$，$b=2$，$k=0$ のまま，$h$ だけを $0$ から $2$ に変える。右側の焦点 F はどこへ移動するか。',i:['el',[3,2,0,0]],t:['el',[3,2,2,0]],kind:'tap'},
+ {q:'楕円で，$a=3$，$h=0$，$k=0$ のまま，$b$ だけを $2$ から $1$ に変える。右側の焦点 F はどこへ移動するか。',i:['el',[3,2,0,0]],t:['el',[3,1,0,0]],kind:'tap'},
+ {q:'放物線 $(y-k)^2=4p(x-h)$ で，$h=0$，$k=0$ のまま，$p$ だけを $1$ から $2$ に変える。焦点 F はどこへ移動するか。',i:['pa',[1,0,0]],t:['pa',[2,0,0]],kind:'tap'},
+ {q:'放物線 $(y-k)^2=4p(x-h)$ で，$p=1$，$h=0$ のまま，$k$ だけを $0$ から $2$ に変える。焦点 F はどこへ移動するか。',i:['pa',[1,0,0]],t:['pa',[1,0,2]],kind:'tap'},
+ {q:'双曲線 $\\dfrac{(x-h)^2}{a^2}-\\dfrac{(y-k)^2}{b^2}=1$ で，$a=2$，$h=0$，$k=0$ のまま，$b$ だけを $1$ から $2$ に変える。右側の焦点 F はどこへ移動するか。',i:['hy',[2,1,0,0,1]],t:['hy',[2,2,0,0,1]],kind:'tap'},
+ {q:'$x=3\\cos\\theta$，$y=2\\sin\\theta$ で，$\\theta$ を $0$ から $\\dfrac{\\pi}{2}$ に変える。点 P はどこへ移動するか。',i:['pm',[3,2,0,0,0]],t:['pm',[3,2,0,0,0.5]],kind:'tap'},
+ {q:'楕円で，$b=2$，$h=0$，$k=0$ のまま，$a$ を $3$ から $2$ に変える。曲線はどうなるか。',i:['el',[3,2,0,0]],t:['el',[2,2,0,0]],kind:'choice',ch:['円になる','双曲線になる','放物線になる','直線になる'],ans:0},
+ {q:'極方程式 $r=\\dfrac{\\ell}{1-e\\cos\\theta}$ で，$\\ell=2$ のまま，$e$ を $0.5$ から $1$ に変える。曲線の種類はどうなるか。',i:['po',[0.5,2]],t:['po',[1,2]],kind:'choice',ch:['楕円','放物線','双曲線','円'],ans:1},
+ {q:'極方程式で，$\\ell=2$ のまま，$e$ を $0.5$ から $1.5$ に変える。曲線の種類はどうなるか。',i:['po',[0.5,2]],t:['po',[1.5,2]],kind:'choice',ch:['楕円','放物線','双曲線','円'],ans:2},
+ {q:'双曲線 $\\dfrac{x^2}{a^2}-\\dfrac{y^2}{b^2}=1$ で，$a=2$ のまま，$b$ を $1$ から $2$ に変える。漸近線の傾きはどうなるか。',i:['hy',[2,1,0,0,1]],t:['hy',[2,2,0,0,1]],kind:'choice',ch:['$\\pm\\dfrac{1}{2}$','$\\pm1$','$\\pm2$','変わらない'],ans:1},
+];
 const GENS={1:g1,2:g2,3:g3,4:g4,5:g5,6:g6};
 const GENS_S={1:s1,2:s2,3:s3,4:s4,5:s5};
-const FNNAME={quad:'2次関数',trig:'三角関数',expo:'指数・対数関数'},PFX={quad:'Q',trig:'S',expo:'E'};
+const FNNAME={quad:'2次関数',trig:'三角関数',expo:'指数・対数関数',cubic:'3次関数',conic:'二次曲線'},PFX={quad:'Q',trig:'S',expo:'E',cubic:'C',conic:'K'};
 function gen(a1,a2,a3){
   let fnKey='quad',type,seed;if(typeof a1==='string'){fnKey=a1;type=a2;seed=a3}else{type=a1;seed=a2}
-  const R=rngOf(seed*7919+type*104729+(fnKey==='trig'?77777:fnKey==='expo'?55555:0));const B=mkB();const p=(fnKey==='trig'?GENS_S:fnKey==='expo'?GENS_E:GENS)[type](R,B);
+  const R=rngOf(seed*7919+type*104729+(fnKey==='trig'?77777:fnKey==='expo'?55555:fnKey==='cubic'?33333:fnKey==='conic'?11111:0));const B=mkB();const p=(fnKey==='trig'?GENS_S:fnKey==='expo'?GENS_E:fnKey==='cubic'?GENS_C:fnKey==='conic'?GENS_K:GENS)[type](R,B);
   p.id=`${PFX[fnKey]}${type}-${seed}`;p.fnKey=fnKey;p.fnName=FNNAME[fnKey];p.type=type;p.seed=seed;p.blanks=B.list;p.groups=B.groups;return p;
 }
 /* ---------- exercise view ---------- */
 const EX={cur:null,marks:{},scored:false};
-function parseId(s){const m=/^\s*([QSE]?)([1-6])-(\d{1,6})\s*$/i.exec(s||'');if(!m)return null;const c=m[1].toUpperCase();const f=c==='S'?'trig':c==='E'?'expo':'quad';if(f!=='quad'&&+m[2]>5)return null;return{f,t:+m[2],s:+m[3]}}
+function parseId(s){const m=/^\s*([QSECK]?)([1-6])-(\d{1,6})\s*$/i.exec(s||'');if(!m)return null;const c=m[1].toUpperCase();const f=c==='S'?'trig':c==='E'?'expo':c==='C'?'cubic':c==='K'?'conic':'quad';if(f!=='quad'&&+m[2]>5)return null;return{f,t:+m[2],s:+m[3]}}
 function qrSVG(url){try{const q=qrcode(0,'M');q.addData(url);q.make();return q.createSvgTag(2,0)}catch(e){return ''}}
 function paperHTML(p,withQR){
   const exURL=PUBLIC_URL+'?ex='+p.id,chkURL=PUBLIC_URL+'?'+p.subs[0].check;
@@ -1467,7 +1914,7 @@ function scoreEx(p,marks){
 /* ---------- URL state ---------- */
 function applyQuery(U){
   const s=U.get('st');
-  if(s){const a=s.split(',');const f=a[0];if(KEYS[f]&&a.length===KEYS[f].length+1){const tf=(f==='s'||f==='e')?'trig':(f==='x'||f==='l')?'expo':'quad';if(tf!==FN)setFn(tf,true);loadVals(f,a.slice(1).map(Number));for(const k of KEYS[f])if(ANG[k]){const v=P[f][k]*24;if(Math.abs(v-Math.round(v))<0.05)P[f][k]=Math.round(v)/24}buildFormSeg()}}
+  if(s){const a=s.split(',');const f=a[0];if(KEYS[f]&&a.length===KEYS[f].length+1){const tf=(f==='s'||f==='e')?'trig':(f==='x'||f==='l')?'expo':['cg','cf','cv'].includes(f)?'cubic':['el','hy','pa','pm','po'].includes(f)?'conic':'quad';if(tf!==FN)setFn(tf,true);loadVals(f,a.slice(1).map(Number));for(const k of KEYS[f])if(ANG[k]){const v=P[f][k]*24;if(Math.abs(v-Math.round(v))<0.05)P[f][k]=Math.round(v)/24}buildFormSeg()}}
   if(U.get('fn'))P.fn=U.get('fn')==='cos'?'cos':'sin';
   const o=U.get('o')||'';O.ghost=o.includes('g')||!U.get('o');O.trail=o.includes('t');O.pos=o.includes('s');O.k=o.includes('k');O.dom=o.includes('d');O.base=o.includes('b');if(U.get('dt'))O.dt=+U.get('dt');if(U.get('dw'))O.dw=+U.get('dw');
   if(U.get('k'))O.kv=+U.get('k');
@@ -1476,7 +1923,7 @@ function applyQuery(U){
   afterChange();
 }
 /* ---------- self test ---------- */
-function selfTest(n=150){const a=selfTestQ(n),b=selfTestS(n),c=selfTestE(n);return{text:'【2次関数】\n'+a.text+'\n【三角関数】\n'+b.text+'\n【指数・対数】\n'+c.text,bad:a.bad+b.bad+c.bad}}
+function selfTest(n=150){const a=selfTestQ(n),b=selfTestS(n),c=selfTestE(n),d=selfTestC(n),e=selfTestK(n);return{text:'【2次関数】\n'+a.text+'\n【三角関数】\n'+b.text+'\n【指数・対数】\n'+c.text+'\n【3次関数】\n'+d.text+'\n【二次曲線】\n'+e.text,bad:a.bad+b.bad+c.bad+d.bad+e.bad}}
 function selfTestS(n=150){
   const out=[];let bad=0;const near=(x,y)=>Math.abs(x-y)<1e-6;
   for(let t=1;t<=5;t++){
