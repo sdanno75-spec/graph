@@ -1,0 +1,957 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>グラフ考察 共通テスト対策</title>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.9/katex.min.css">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.9/katex.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcode-generator/1.4.4/qrcode.min.js"></script>
+<style>
+:root{--bg:#f3f4f6;--panel:#fff;--ink:#1d2330;--sub:#5b6474;--line:#d7dbe2;--acc:#1f5fbf;--acc-soft:#e7effb;--hot:#d9480f;--ok:#2b8a3e;--ng:#c92a2a;--ghost:#a3adbd}
+*{box-sizing:border-box}
+html,body{margin:0;height:100%}
+body{background:var(--bg);color:var(--ink);font-family:"Hiragino Kaku Gothic ProN","Yu Gothic UI","Meiryo",sans-serif;display:flex;flex-direction:column;font-size:15px}
+header{display:flex;flex-wrap:wrap;align-items:center;gap:8px 18px;padding:10px 16px;background:#fff;border-bottom:1px solid var(--line)}
+h1{font-size:17px;margin:0;white-space:nowrap}
+h1 small{font-weight:normal;color:var(--sub);font-size:12px;margin-left:6px}
+.tabs{display:flex;gap:4px;flex-wrap:wrap}
+.tab{border:1px solid var(--line);background:#fff;padding:6px 12px;border-radius:6px;font-size:14px;cursor:pointer;color:var(--ink);font-family:inherit}
+.tab.on{background:var(--acc);color:#fff;border-color:var(--acc)}
+.tab:disabled{color:#a9afba;cursor:default;background:#f7f8fa}
+.spacer{flex:1}
+main{flex:1;min-height:0;display:flex;flex-direction:column}
+.app{flex:1;min-height:0;display:grid;grid-template-columns:minmax(0,1fr) 390px;gap:12px;padding:12px}
+.gwrap{position:relative;background:#fff;border:1px solid var(--line);border-radius:8px;overflow:hidden;min-height:340px;touch-action:none}
+#cv{display:block;width:100%;height:100%;cursor:grab}
+.zoom{position:absolute;right:8px;top:8px;display:flex;flex-direction:column;gap:4px}
+.zoom button{width:34px;height:34px;border:1px solid var(--line);background:#fff;border-radius:6px;font-size:18px;cursor:pointer;color:var(--ink)}
+.hint{position:absolute;left:10px;bottom:8px;font-size:12px;color:var(--sub);background:rgba(255,255,255,.85);padding:2px 6px;border-radius:4px}
+.side{overflow:auto;display:flex;flex-direction:column;gap:10px;min-height:0}
+.card{background:#fff;border:1px solid var(--line);border-radius:8px;padding:12px}
+.card h3{margin:0 0 8px;font-size:14px;color:var(--sub);font-weight:600}
+.seg{display:flex;border:1px solid var(--line);border-radius:6px;overflow:hidden}
+.seg button{flex:1;border:0;background:#fff;padding:7px 4px;font-size:13px;cursor:pointer;border-right:1px solid var(--line);font-family:inherit;color:var(--ink)}
+.seg button:last-child{border-right:0}
+.seg button.on{background:var(--acc-soft);color:var(--acc);font-weight:600}
+.prow{margin-top:10px}
+.ptop{display:flex;align-items:center;gap:8px}
+.ptop .lab{min-width:62px;font-size:15px}
+.ptop input[type=number]{width:84px;padding:5px 6px;border:1.5px solid #555;border-radius:2px;font-size:15px;text-align:right;font-family:inherit}
+.ptop label{font-size:12px;color:var(--sub);margin-left:auto;display:flex;align-items:center;gap:3px}
+input[type=range]{width:100%;margin:6px 0 0;accent-color:var(--ink)}
+.prow.locked{opacity:.45}
+.row2{display:flex;gap:6px;flex-wrap:wrap;align-items:center;margin-top:8px;font-size:13px}
+.btn{border:1px solid var(--line);background:#fff;border-radius:6px;padding:7px 12px;cursor:pointer;font-size:13px;font-family:inherit;color:var(--ink)}
+.btn.pri{background:var(--acc);border-color:var(--acc);color:#fff}
+.btn:disabled{opacity:.45;cursor:default}
+.chk{display:flex;flex-wrap:wrap;gap:6px 14px;font-size:13px}
+.chk label{display:flex;align-items:center;gap:4px;cursor:pointer}
+.irow{display:flex;gap:8px;padding:4px 0;border-bottom:1px dashed #eceef2;font-size:14px;align-items:baseline}
+.irow b{min-width:78px;color:var(--sub);font-weight:500;font-size:13px}
+.err{color:var(--ng);font-weight:600}
+.note{color:var(--sub);font-size:13px}
+details summary{cursor:pointer;font-size:13px;color:var(--acc);margin-top:6px}
+.steps{font-size:14px;margin-top:6px}
+.log{font-size:13px;margin-top:6px;color:var(--ink);background:#f7f8fa;border-radius:6px;padding:6px 8px;min-height:20px}
+.qtext{font-size:15px;line-height:1.7}
+.choices{display:flex;flex-direction:column;gap:6px;margin-top:8px}
+.choices button{text-align:left;border:1px solid var(--line);background:#fff;border-radius:6px;padding:8px 10px;cursor:pointer;font-size:14px;font-family:inherit;color:var(--ink)}
+.choices button.sel{border-color:var(--acc);background:var(--acc-soft)}
+.choices button.right{border-color:var(--ok);background:#ebfbee}
+.choices button.wrong{border-color:var(--ng);background:#fff5f5}
+.fb{margin-top:8px;font-size:14px;font-weight:600}
+.fb.ok{color:var(--ok)} .fb.ng{color:var(--ng)}
+.mini{font-size:12px;color:var(--sub)}
+select,input.txt{padding:6px 8px;border:1px solid var(--line);border-radius:6px;font-size:14px;font-family:inherit;background:#fff;color:var(--ink)}
+/* exercise */
+.ex{flex:1;min-height:0;overflow:auto;padding:12px;display:grid;grid-template-columns:minmax(0,1fr) 360px;gap:12px;align-items:start}
+.paperwrap{background:#fff;border:1px solid var(--line);border-radius:8px;padding:18px;overflow:auto}
+.marks{position:sticky;top:0;max-height:calc(100vh - 90px);overflow:auto}
+.mrow{display:flex;align-items:center;gap:5px;padding:4px 0;border-bottom:1px solid #f0f1f4;flex-wrap:wrap}
+.mrow .kn{display:inline-flex;align-items:center;justify-content:center;min-width:28px;height:26px;border:1.5px solid #333;font-family:"Yu Mincho","Hiragino Mincho ProN",serif;font-size:15px}
+.bub{display:flex;gap:2px;flex-wrap:wrap}
+.bub button{width:24px;height:26px;border:1px solid #b9c0cc;border-radius:12px;background:#fff;cursor:pointer;font-size:13px;padding:0;font-family:inherit;color:var(--ink)}
+.bub button.on{background:#333;color:#fff;border-color:#333}
+.mrow.ok .kn{border-color:var(--ok);color:var(--ok)}
+.mrow.ng .kn{border-color:var(--ng);color:var(--ng)}
+.mres{font-size:12px;margin-left:4px}
+.score{font-size:18px;font-weight:700;margin:6px 0}
+.sol{font-size:14px;line-height:1.75;margin-top:10px;border-top:1px solid var(--line);padding-top:10px}
+.sol h4{margin:10px 0 4px;font-size:14px}
+/* paper (problem) */
+.paper{font-family:"Yu Mincho","Hiragino Mincho ProN","MS Mincho",serif;color:#000;font-size:14.5px;line-height:1.85;max-width:760px;margin:0 auto}
+.paper .phead{display:flex;align-items:flex-start;gap:12px;border-bottom:1.5px solid #000;padding-bottom:6px;margin-bottom:10px}
+.paper .phead .pt{flex:1}
+.paper .phead .pt b{font-size:17px}
+.paper .phead .pid{font-family:"Hiragino Kaku Gothic ProN","Yu Gothic UI",sans-serif;font-size:12px}
+.paper .qrs{display:flex;gap:10px}
+.paper .qr{text-align:center;font-size:9.5px;font-family:"Hiragino Kaku Gothic ProN","Yu Gothic UI",sans-serif;line-height:1.3}
+.paper .qr svg{width:64px;height:64px;display:block;margin:0 auto 2px}
+.paper .name{font-family:"Hiragino Kaku Gothic ProN","Yu Gothic UI",sans-serif;font-size:12px;margin-top:4px}
+.paper .name span{display:inline-block;border-bottom:1px solid #000;min-width:150px}
+.paper p{margin:0 0 4px}
+.paper .sub{margin-top:8px}
+.paper .opts{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:2px 18px;border:1px solid #000;padding:6px 12px;margin:6px 0}
+.paper .opts.one{grid-template-columns:1fr}
+.paper .opts.three{grid-template-columns:repeat(3,minmax(0,1fr))}
+.paper .opts.four{grid-template-columns:repeat(4,minmax(0,1fr))}
+.paper .ops{border:1.5px solid #000;border-radius:10px;padding:4px 12px;margin:6px 0}
+.paper .talk{border:1.5px dashed #000;padding:6px 12px;margin:6px 0}
+.paper .talk div{padding-left:3.2em;text-indent:-3.2em}
+.paper .figs{display:flex;justify-content:center;gap:10px;margin:6px 0;flex-wrap:wrap}
+.paper .figcap{text-align:center;font-size:13px}
+.paper .gopts{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:4px 10px;margin:6px 0}
+.paper .gopts div{text-align:center}
+.bx{display:inline-block;border:1.5px solid #000;padding:0 .55em;margin:0 2px;line-height:1.35;font-family:"Yu Mincho","Hiragino Mincho ProN",serif;outline:1px solid #000;outline-offset:1px}
+.tbl{border-collapse:collapse;margin:4px 0}
+.tbl td{padding:1px 10px}
+.soft{border:1.5px solid #000;border-radius:6px;display:inline-block;padding:4px;background:#fff}
+.soft .sbar{height:12px;border-bottom:1px solid #000;margin-bottom:4px;display:flex;gap:3px}
+.soft .sbar i{display:inline-block;width:9px;height:8px;border:1px solid #000}
+.soft .sbody{display:flex;gap:8px;align-items:center}
+.soft .spanel{border:1px solid #000;padding:4px 6px;font-size:12px;width:150px;font-family:"Yu Mincho",serif}
+.soft .sform{border:1px solid #000;padding:0 4px;margin-bottom:4px;text-align:center;font-size:12px}
+.soft .srow{display:flex;align-items:center;gap:4px;margin-top:3px}
+.soft .sbox{display:inline-block;min-width:34px;height:16px;border:1px solid #000;text-align:center;line-height:15px;font-size:11px}
+.soft .sl{position:relative;height:8px;border-bottom:1px solid #000;margin:2px 2px 4px}
+.soft .sl i{position:absolute;bottom:-4px;width:8px;height:8px;border-radius:50%;background:#000;margin-left:-4px}
+.gsvg{overflow:visible}
+.gsvg .ax{stroke:#000;stroke-width:1}
+.gsvg .cv{stroke:#000;stroke-width:1.8;fill:none}
+.gsvg .cv2{stroke:#888;stroke-width:1;fill:none}
+.gsvg .cvd{stroke:#000;stroke-width:1.4;fill:none;stroke-dasharray:4 3}
+.gsvg text{font-family:"Times New Roman",serif;font-size:12px;font-style:italic}
+.gsvg text.up{font-style:normal}
+#printArea{display:none}
+dialog{border:1px solid var(--line);border-radius:10px;max-width:640px;width:92vw;padding:18px}
+dialog::backdrop{background:rgba(0,0,0,.35)}
+@media (max-width:900px){
+  .app{grid-template-columns:1fr}
+  .gwrap{height:56vh}
+  .ex{grid-template-columns:1fr}
+  .marks{position:static;max-height:none}
+}
+@media print{
+  @page{size:A4;margin:11mm 12mm}
+  body{display:block;background:#fff}
+  header,main,dialog{display:none!important}
+  #printArea{display:block}
+  .paper{max-width:none;font-size:10.6pt;line-height:1.75}
+  .pbreak{page-break-before:always}
+}
+</style>
+</head>
+<body>
+<header>
+  <h1>グラフ考察<small>共通テスト対策</small></h1>
+  <div class="tabs" id="fnTabs">
+    <button class="tab on">2次関数</button>
+    <button class="tab" disabled title="準備中">三角関数</button>
+    <button class="tab" disabled title="準備中">指数・対数</button>
+    <button class="tab" disabled title="準備中">3次関数</button>
+    <button class="tab" disabled title="準備中">二次曲線</button>
+  </div>
+  <div class="spacer"></div>
+  <div class="tabs" id="modeTabs">
+    <button class="tab on" data-m="obs">観察</button>
+    <button class="tab" data-m="pred">予想</button>
+    <button class="tab" data-m="mis">ミッション</button>
+    <button class="tab" data-m="ex">演習</button>
+  </div>
+  <button class="btn" id="infoBtn">情報</button>
+</header>
+<main>
+  <div class="app" id="appView">
+    <div class="gwrap" id="gwrap">
+      <canvas id="cv"></canvas>
+      <div class="zoom"><button id="zin" title="拡大">+</button><button id="zout" title="縮小">−</button><button id="zhome" title="原点にもどす" style="font-size:12px">O</button></div>
+      <div class="hint" id="ghint">ドラッグで移動，ホイールやボタンで拡大・縮小</div>
+    </div>
+    <div class="side" id="side">
+      <div class="card" id="modeCard" style="display:none"></div>
+      <div class="card" id="paramCard">
+        <h3>式の形と係数</h3>
+        <div class="seg" id="formSeg">
+          <button data-f="v">a(x−p)²+q</button>
+          <button data-f="g">ax²+bx+c</button>
+          <button data-f="t">3点を通る</button>
+        </div>
+        <div id="params"></div>
+        <div class="row2">刻み
+          <div class="seg" id="stepSeg" style="flex:0 0 auto"><button data-s="0.1">0.1</button><button data-s="0.5">0.5</button><button data-s="1">1</button></div>
+        </div>
+      </div>
+      <div class="card" id="viewCard">
+        <h3>表示</h3>
+        <div class="chk">
+          <label><input type="checkbox" id="oGhost" checked>前のグラフを残す</label>
+          <label><input type="checkbox" id="oTrail">頂点の跡</label>
+          <label><input type="checkbox" id="oPos">f(x)&gt;0 の範囲</label>
+          <label><input type="checkbox" id="oK">直線 y=k</label>
+          <label><input type="checkbox" id="oDom">定義域</label>
+        </div>
+        <div id="kBox" style="display:none" class="prow">
+          <div class="ptop"><span class="lab">k</span><input type="number" id="kNum" step="0.1"></div>
+          <input type="range" id="kRng" min="-10" max="10" step="0.1">
+        </div>
+        <div id="domBox" style="display:none">
+          <div class="prow"><div class="ptop"><span class="lab">左端 t</span><input type="number" id="dtNum" step="0.1"></div><input type="range" id="dtRng" min="-10" max="10" step="0.1"></div>
+          <div class="prow"><div class="ptop"><span class="lab">幅</span><input type="number" id="dwNum" step="0.1" min="0.5"></div><input type="range" id="dwRng" min="0.5" max="10" step="0.1"></div>
+        </div>
+        <div class="row2"><button class="btn" id="clrTrail">跡を消す</button><button class="btn" id="saveX">状態Xとして記録</button><button class="btn" id="backX" disabled>状態Xにもどす</button></div>
+        <div class="log" id="xlog">状態Xを記録すると，そこから何を変えたかがここに出ます。</div>
+      </div>
+      <div class="card" id="infoCard"><h3>グラフの情報</h3><div id="info"></div></div>
+    </div>
+  </div>
+  <div class="ex" id="exView" style="display:none">
+    <div>
+      <div class="card" style="margin-bottom:10px">
+        <div class="row2" style="margin-top:0">
+          <select id="exType">
+            <option value="1">型1 操作で起こり得るか</option>
+            <option value="2">型2 3点の入力と方程式の解</option>
+            <option value="3">型3 エラーになる入力</option>
+            <option value="4">型4 係数の符号とグラフ</option>
+            <option value="5">型5 頂点の動き（会話文）</option>
+            <option value="6">型6 ○×の組合せ</option>
+          </select>
+          <button class="btn pri" id="exNew">新しい問題</button>
+          <span class="mini">問題番号</span><input class="txt" id="exId" style="width:110px" placeholder="例 Q1-4831"><button class="btn" id="exOpen">開く</button>
+          <span class="spacer"></span>
+          <button class="btn" id="exPrint">問題を印刷</button><button class="btn" id="exPrintA">解答・解説を印刷</button>
+        </div>
+      </div>
+      <div class="paperwrap"><div id="paper"></div></div>
+    </div>
+    <div class="card marks" id="marks"></div>
+  </div>
+</main>
+<div id="printArea"></div>
+<dialog id="infoDlg">
+  <h3 style="margin-top:0">グラフ考察 共通テスト対策</h3>
+  <p>バージョン <b id="verTxt"></b></p>
+  <p class="note">観察：係数を動かしてグラフの変化を見る。予想：変化を先に予想してから確かめる。ミッション：点線のグラフに合わせる。演習：共通テスト型の問題（印刷して解き，画面でマーク入力して採点）。</p>
+  <p class="note">問題の右上のQRコードで，採点の画面や，その問題の状態のグラフを開けます。</p>
+  <div class="row2"><button class="btn" id="stBtn">問題の自動検算を実行</button></div>
+  <pre id="stOut" style="font-size:12px;white-space:pre-wrap;max-height:240px;overflow:auto"></pre>
+  <div class="row2"><button class="btn pri" id="dlgClose">閉じる</button></div>
+</dialog>
+<script>
+'use strict';
+const VERSION='0.1.0';
+const PUBLIC_URL='https://sdanno75-spec.github.io/graph/';
+const KANA='アイウエオカキクケコサシスセソタチツテトナニヌネノハヒフヘホマミムメモ';
+const CIR='⓪①②③④⑤⑥⑦⑧⑨';
+const EPS=1e-9;
+const $=s=>document.querySelector(s);
+function K(tex,disp){try{return katex.renderToString(tex,{throwOnError:false,strict:false,displayMode:!!disp})}catch(e){return tex}}
+function T(s){return s.replace(/\$([^$]+)\$/g,(m,t)=>K(t))}
+function rnd(v,d=1000){v=Math.round(v*d)/d;return Math.abs(v)<1e-9?0:v}
+function fx(v){return String(rnd(v))}
+function fxm(v){return fx(v).replace('-','−')}
+function poly(a,b,c){
+  let s='';
+  const term=(co,x)=>{if(Math.abs(co)<1e-9)return '';const sg=co<0?'-':(s===''?'':'+');const m=Math.abs(co);const ms=(x!==''&&Math.abs(m-1)<1e-9)?'':fx(m);return sg+ms+x};
+  s+=term(a,'x^2');s+=term(b,'x');s+=term(c,'');return s||'0';
+}
+function vform(a,p,q){
+  const as=Math.abs(a-1)<1e-9?'':Math.abs(a+1)<1e-9?'-':fx(a);
+  let s=Math.abs(p)<1e-9?as+'x^2':as+'(x'+(p>0?'-'+fx(p):'+'+fx(-p))+')^2';
+  if(Math.abs(q)>1e-9)s+=(q>0?'+':'-')+fx(Math.abs(q));
+  return s;
+}
+/* ---------------- state ---------------- */
+const P={form:'v',v:{a:1,p:0,q:0},g:{a:1,b:0,c:0},t:{ax:-1,ay:0,bx:0,by:-1,cx:1,cy:0}};
+const KEYS={v:['a','p','q'],g:['a','b','c'],t:['ax','ay','bx','by','cx','cy']};
+const LBL={a:'$a$',p:'$p$',q:'$q$',b:'$b$',c:'$c$',ax:'A の $x$',ay:'A の $y$',bx:'B の $x$',by:'B の $y$',cx:'C の $x$',cy:'C の $y$'};
+const RANGE={a:[-5,5],p:[-10,10],q:[-10,10],b:[-10,10],c:[-10,10],ax:[-10,10],ay:[-10,10],bx:[-10,10],by:[-10,10],cx:[-10,10],cy:[-10,10]};
+const O={ghost:true,trail:false,pos:false,k:false,dom:false,kv:0,dt:-1,dw:3};
+let STEP=0.1,lock={},ghost=null,trail=[],stateX=null,mode='obs';
+let pred=null,mis=null;
+function fromPts(t){
+  const x1=t.ax,y1=t.ay,x2=t.bx,y2=t.by,x3=t.cx,y3=t.cy;
+  if(Math.abs(x1-x2)<EPS||Math.abs(x2-x3)<EPS||Math.abs(x1-x3)<EPS)return{err:'x 座標が等しい点があります'};
+  const d=(x1-x2)*(x1-x3)*(x2-x3);
+  const a=(x3*(y2-y1)+x2*(y1-y3)+x1*(y3-y2))/d;
+  const b=(x3*x3*(y1-y2)+x2*x2*(y3-y1)+x1*x1*(y2-y3))/d;
+  const c=(x2*x3*(x2-x3)*y1+x3*x1*(x3-x1)*y2+x1*x2*(x1-x2)*y3)/d;
+  if(Math.abs(a)<1e-9)return{err:'3点が一直線上にあります'};
+  return{a,b,c};
+}
+function coefOf(form,vals){
+  if(form==='v'){const{a,p,q}=vals;return{a,b:-2*a*p,c:a*p*p+q}}
+  if(form==='g')return{a:vals.a,b:vals.b,c:vals.c};
+  return fromPts(vals);
+}
+function coef(){return coefOf(P.form,P[P.form])}
+function vertexOf(co){if(!co||co.err||Math.abs(co.a)<1e-12)return null;return{x:-co.b/(2*co.a),y:co.c-co.b*co.b/(4*co.a)}}
+function setForm(f,convert=true){
+  if(convert&&f!==P.form){
+    const co=coef();
+    if(!co.err){
+      if(f==='v'&&Math.abs(co.a)>1e-9){P.v={a:rnd(co.a,100),p:rnd(-co.b/(2*co.a),100),q:rnd(co.c-co.b*co.b/(4*co.a),100)}}
+      if(f==='g'){P.g={a:rnd(co.a,100),b:rnd(co.b,100),c:rnd(co.c,100)}}
+      if(f==='t'){const vx=vertexOf(co);const h=vx?Math.round(vx.x):0;const xs=[h-1,h,h+2];const ys=xs.map(x=>rnd(co.a*x*x+co.b*x+co.c,10));P.t={ax:xs[0],ay:ys[0],bx:xs[1],by:ys[1],cx:xs[2],cy:ys[2]}}
+    }
+  }
+  P.form=f;lock={};buildParams();afterChange(true);
+}
+/* ---------------- params UI ---------------- */
+function buildParams(){
+  document.querySelectorAll('#formSeg button').forEach(b=>b.classList.toggle('on',b.dataset.f===P.form));
+  const box=$('#params');let h='';
+  for(const k of KEYS[P.form]){
+    const [lo,hi]=RANGE[k];
+    h+=`<div class="prow" id="row_${k}"><div class="ptop"><span class="lab">${T(LBL[k])}</span><input type="number" id="n_${k}" step="${STEP}"><label><input type="checkbox" id="l_${k}">固定</label></div><input type="range" id="r_${k}" min="${lo}" max="${hi}" step="${STEP}"></div>`;
+  }
+  box.innerHTML=h;
+  for(const k of KEYS[P.form]){
+    const n=$('#n_'+k),r=$('#r_'+k),l=$('#l_'+k);
+    r.addEventListener('pointerdown',()=>{markGhost()});
+    r.addEventListener('keydown',()=>{markGhost()});
+    r.addEventListener('input',()=>{setVal(k,+r.value)});
+    n.addEventListener('change',()=>{if(n.value==='')return;markGhost();setVal(k,+n.value)});
+    l.addEventListener('change',()=>{lock[k]=l.checked;syncInputs()});
+  }
+  syncInputs();
+}
+function syncInputs(){
+  const disabled=(mode==='pred'&&pred&&!pred.done);
+  for(const k of KEYS[P.form]){
+    const v=P[P.form][k];const n=$('#n_'+k),r=$('#r_'+k);if(!n)continue;
+    n.value=rnd(v);r.value=v;const lk=!!lock[k]||disabled;n.disabled=lk;r.disabled=lk;
+    $('#row_'+k).classList.toggle('locked',lk);n.step=STEP;r.step=STEP;
+  }
+}
+function setVal(k,v){
+  const [lo,hi]=RANGE[k];
+  v=Math.round(v/STEP)*STEP;v=Math.min(hi,Math.max(lo,rnd(v,1e6)));
+  P[P.form][k]=v;syncInputs();afterChange();
+}
+function markGhost(){if(O.ghost){const co=coef();ghost=co.err?null:co}}
+function afterChange(silent){
+  const co=coef();
+  if(O.trail&&!co.err){const v=vertexOf(co);if(v){const last=trail[trail.length-1];if(!last||Math.hypot(last.x-v.x,last.y-v.y)>1e-6)trail.push(v)}}
+  draw();showInfo();logX();
+}
+/* ---------------- graph ---------------- */
+const cv=$('#cv'),ctx=cv.getContext('2d');
+const G={cx:0,cy:0,sc:40,W:600,H:400};
+const SX=x=>G.W/2+(x-G.cx)*G.sc,SY=y=>G.H/2-(y-G.cy)*G.sc,IX=px=>(px-G.W/2)/G.sc+G.cx,IY=py=>-(py-G.H/2)/G.sc+G.cy;
+function resize(){const r=cv.parentElement.getBoundingClientRect();const d=window.devicePixelRatio||1;G.W=r.width;G.H=r.height;cv.width=Math.round(r.width*d);cv.height=Math.round(r.height*d);ctx.setTransform(d,0,0,d,0,0);draw()}
+function niceStep(){const c=[0.5,1,2,5,10,20];for(const u of c)if(u*G.sc>=26)return u;return 50}
+function fval(co,x){return co.a*x*x+co.b*x+co.c}
+function drawCurve(co,color,width,dash){
+  if(!co||co.err)return;ctx.save();ctx.strokeStyle=color;ctx.lineWidth=width;ctx.setLineDash(dash||[]);ctx.beginPath();
+  let first=true;for(let px=-2;px<=G.W+2;px+=2){const x=IX(px),y=fval(co,x),py=SY(y);if(py<-2000||py>G.H+2000){first=true;continue}if(first){ctx.moveTo(px,py);first=false}else ctx.lineTo(px,py)}
+  ctx.stroke();ctx.restore();
+}
+function dot(x,y,color,r=5,label,lpos){
+  const px=SX(x),py=SY(y);ctx.save();ctx.fillStyle=color;ctx.beginPath();ctx.arc(px,py,r,0,7);ctx.fill();
+  if(label){ctx.font='13px "Hiragino Kaku Gothic ProN","Yu Gothic UI",sans-serif';ctx.fillStyle=color;ctx.textAlign='left';ctx.fillText(label,px+(lpos?lpos[0]:7),py+(lpos?lpos[1]:-7))}
+  ctx.restore();
+}
+function draw(){
+  if(!G.W)return;ctx.clearRect(0,0,G.W,G.H);ctx.fillStyle='#fff';ctx.fillRect(0,0,G.W,G.H);
+  const u=niceStep(),x0=IX(0),x1=IX(G.W),y0=IY(G.H),y1=IY(0);
+  ctx.lineWidth=1;ctx.strokeStyle='#eef0f3';ctx.beginPath();
+  for(let x=Math.ceil(x0/u)*u;x<=x1;x+=u){ctx.moveTo(SX(x),0);ctx.lineTo(SX(x),G.H)}
+  for(let y=Math.ceil(y0/u)*u;y<=y1;y+=u){ctx.moveTo(0,SY(y));ctx.lineTo(G.W,SY(y))}
+  ctx.stroke();
+  const co=coef();
+  if(O.dom){ctx.fillStyle='rgba(31,95,191,.07)';ctx.fillRect(SX(O.dt),0,O.dw*G.sc,G.H);ctx.strokeStyle='rgba(31,95,191,.5)';ctx.setLineDash([4,4]);ctx.beginPath();ctx.moveTo(SX(O.dt),0);ctx.lineTo(SX(O.dt),G.H);ctx.moveTo(SX(O.dt+O.dw),0);ctx.lineTo(SX(O.dt+O.dw),G.H);ctx.stroke();ctx.setLineDash([])}
+  // axes
+  ctx.strokeStyle='#333';ctx.lineWidth=1.2;ctx.beginPath();ctx.moveTo(0,SY(0));ctx.lineTo(G.W,SY(0));ctx.moveTo(SX(0),0);ctx.lineTo(SX(0),G.H);ctx.stroke();
+  ctx.fillStyle='#555';ctx.font='11px sans-serif';ctx.textAlign='center';
+  const lab=(u*G.sc<36)?u*2:u;
+  for(let x=Math.ceil(x0/lab)*lab;x<=x1;x+=lab){if(Math.abs(x)<1e-9)continue;ctx.fillText(fxm(x),SX(x),Math.min(G.H-4,Math.max(12,SY(0)+14)))}
+  ctx.textAlign='right';
+  for(let y=Math.ceil(y0/lab)*lab;y<=y1;y+=lab){if(Math.abs(y)<1e-9)continue;ctx.fillText(fxm(y),Math.min(G.W-4,Math.max(26,SX(0)-5)),SY(y)+4)}
+  ctx.font='italic 14px "Times New Roman",serif';ctx.fillStyle='#333';ctx.textAlign='left';ctx.fillText('x',G.W-14,SY(0)-6);ctx.fillText('y',SX(0)+6,13);ctx.fillText('O',SX(0)-14,SY(0)+15);
+  // mission target
+  if(mode==='mis'&&mis)drawCurve(mis.target,'#d9480f',2.2,[8,6]);
+  if(O.ghost&&ghost)drawCurve(ghost,'#a3adbd',2,[]);
+  if(trail.length>1){ctx.save();ctx.strokeStyle='#d9480f';ctx.lineWidth=1.6;ctx.setLineDash([3,4]);ctx.beginPath();trail.forEach((p,i)=>{i?ctx.lineTo(SX(p.x),SY(p.y)):ctx.moveTo(SX(p.x),SY(p.y))});ctx.stroke();ctx.restore()}
+  if(!co.err&&O.pos){
+    const segs=posSegs(co);ctx.save();ctx.strokeStyle='rgba(43,138,62,.75)';ctx.lineWidth=6;ctx.lineCap='butt';ctx.beginPath();
+    for(const [l,r] of segs){const L=Math.max(l,x0-1),Rr=Math.min(r,x1+1);if(L<Rr){ctx.moveTo(SX(L),SY(0));ctx.lineTo(SX(Rr),SY(0))}}ctx.stroke();ctx.restore();
+  }
+  if(O.k){ctx.save();ctx.strokeStyle='#7048e8';ctx.lineWidth=1.5;ctx.beginPath();ctx.moveTo(0,SY(O.kv));ctx.lineTo(G.W,SY(O.kv));ctx.stroke();ctx.fillStyle='#7048e8';ctx.font='italic 13px "Times New Roman",serif';ctx.fillText('y = '+fxm(O.kv),6,SY(O.kv)-5);ctx.restore();
+    if(!co.err)for(const r of solve(co.a,co.b,co.c-O.kv))dot(r,O.kv,'#7048e8',4);}
+  drawCurve(co,'#1f3a7a',2.6);
+  if(!co.err){
+    const v=vertexOf(co);
+    if(v)dot(v.x,v.y,'#1f3a7a',5,'頂点');
+    if(O.dom&&Math.abs(co.a)>1e-12){const mm=domMM(co);dot(mm.max.x,mm.max.y,'#c92a2a',5,'最大');dot(mm.min.x,mm.min.y,'#1f5fbf',5,'最小',[7,16])}
+  }
+  if(P.form==='t'){const t=P.t;[['A',t.ax,t.ay],['B',t.bx,t.by],['C',t.cx,t.cy]].forEach(([n,x,y])=>dot(x,y,'#000',5,n,[-4,-10]))}
+  if(mode==='pred'&&pred){
+    if(pred.mark){const px=SX(pred.mark.x),py=SY(pred.mark.y);ctx.save();ctx.strokeStyle='#d9480f';ctx.lineWidth=2.5;ctx.beginPath();ctx.moveTo(px-8,py-8);ctx.lineTo(px+8,py+8);ctx.moveTo(px+8,py-8);ctx.lineTo(px-8,py+8);ctx.stroke();ctx.fillStyle='#d9480f';ctx.font='13px sans-serif';ctx.fillText('予想',px+10,py+18);ctx.restore()}
+    if(pred.done&&pred.correct)dot(pred.correct.x,pred.correct.y,'#2b8a3e',7,'正解',[10,20]);
+  }
+}
+function solve(a,b,c){if(Math.abs(a)<1e-12){return Math.abs(b)<1e-12?[]:[-c/b]}const D=b*b-4*a*c;if(D<-1e-9)return[];if(Math.abs(D)<=1e-9)return[-b/(2*a)];const s=Math.sqrt(D);return[(-b-s)/(2*a),(-b+s)/(2*a)].sort((x,y)=>x-y)}
+function posSegs(co){const r=solve(co.a,co.b,co.c);const pts=[-1e6,...r,1e6];const segs=[];for(let i=0;i<pts.length-1;i++){const m=(pts[i]+pts[i+1])/2;if(fval(co,m)>0)segs.push([pts[i],pts[i+1]])}return segs}
+function domMM(co){const l=O.dt,r=O.dt+O.dw,v=vertexOf(co);const c=[l,r];if(v&&v.x>l&&v.x<r)c.push(v.x);const pts=c.map(x=>({x,y:fval(co,x)}));let mx=pts[0],mn=pts[0];for(const p of pts){if(p.y>mx.y+1e-12)mx=p;if(p.y<mn.y-1e-12)mn=p}return{max:mx,min:mn}}
+/* pan/zoom/drag */
+const ptrs=new Map();let dragPt=null,panStart=null,pinch0=null;
+cv.addEventListener('pointerdown',e=>{
+  cv.setPointerCapture(e.pointerId);const r=cv.getBoundingClientRect();const px=e.clientX-r.left,py=e.clientY-r.top;ptrs.set(e.pointerId,{x:px,y:py});
+  if(ptrs.size===2){const a=[...ptrs.values()];pinch0={d:Math.hypot(a[0].x-a[1].x,a[0].y-a[1].y),sc:G.sc};panStart=null;dragPt=null;return}
+  if(mode==='pred'&&pred&&!pred.done&&PRED[pred.i].kind==='tap'){pred.mark={x:IX(px),y:IY(py)};draw();renderPred();return}
+  if(P.form==='t'&&!(mode==='pred'&&pred&&!pred.done)){
+    const t=P.t;for(const n of ['a','b','c']){const x=t[n+'x'],y=t[n+'y'];if(Math.hypot(SX(x)-px,SY(y)-py)<14&&!lock[n+'x']&&!lock[n+'y']){dragPt=n;markGhost();return}}
+  }
+  panStart={px,py,cx:G.cx,cy:G.cy};cv.style.cursor='grabbing';
+});
+cv.addEventListener('pointermove',e=>{
+  if(!ptrs.has(e.pointerId))return;const r=cv.getBoundingClientRect();const px=e.clientX-r.left,py=e.clientY-r.top;ptrs.set(e.pointerId,{x:px,y:py});
+  if(pinch0&&ptrs.size===2){const a=[...ptrs.values()];const d=Math.hypot(a[0].x-a[1].x,a[0].y-a[1].y);G.sc=Math.min(400,Math.max(6,pinch0.sc*d/pinch0.d));draw();return}
+  if(dragPt){const s=STEP;let x=Math.round(IX(px)/s)*s,y=Math.round(IY(py)/s)*s;P.t[dragPt+'x']=rnd(x,1e6);P.t[dragPt+'y']=rnd(y,1e6);syncInputs();afterChange();return}
+  if(panStart){G.cx=panStart.cx-(px-panStart.px)/G.sc;G.cy=panStart.cy+(py-panStart.py)/G.sc;draw()}
+});
+function endPtr(e){ptrs.delete(e.pointerId);if(ptrs.size<2)pinch0=null;if(ptrs.size===0){dragPt=null;panStart=null;cv.style.cursor='grab'}}
+cv.addEventListener('pointerup',endPtr);cv.addEventListener('pointercancel',endPtr);
+cv.addEventListener('wheel',e=>{e.preventDefault();const r=cv.getBoundingClientRect();const px=e.clientX-r.left,py=e.clientY-r.top;const wx=IX(px),wy=IY(py);G.sc=Math.min(400,Math.max(6,G.sc*(e.deltaY<0?1.12:1/1.12)));G.cx=wx-(px-G.W/2)/G.sc;G.cy=wy+(py-G.H/2)/G.sc;draw()},{passive:false});
+$('#zin').onclick=()=>{G.sc=Math.min(400,G.sc*1.25);draw()};$('#zout').onclick=()=>{G.sc=Math.max(6,G.sc/1.25);draw()};$('#zhome').onclick=()=>{G.cx=0;G.cy=0;G.sc=40;draw()};
+/* ---------------- info ---------------- */
+function irow(k,v){return `<div class="irow"><b>${k}</b><span>${v}</span></div>`}
+function showInfo(){
+  const co=coef(),box=$('#info');
+  if(co.err){box.innerHTML=`<div class="err">エラー：${co.err}。<br>この3点を通る2次関数はないため，グラフは表示されません。</div>`;return}
+  const{a,b,c}=co;let h=irow('一般形',K('y='+poly(a,b,c)));
+  if(Math.abs(a)<1e-12){box.innerHTML=h+'<div class="note">a = 0 なので2次関数ではありません（直線）。</div>';return}
+  const p=-b/(2*a),q=c-b*b/(4*a),D=b*b-4*a*c;
+  h+=irow('標準形',K('y='+vform(a,p,q)));
+  h+=irow('頂点',K(`(${fx(p)},\\ ${fx(q)})`)+'　軸 '+K(`x=${fx(p)}`));
+  h+=irow('形',a>0?'下に凸':'上に凸');
+  h+=irow('判別式',K(`D=b^2-4ac=${fx(D)}`));
+  const rs=solve(a,b,c);
+  h+=irow('x 軸との共有点',rs.length===0?'なし':(rs.length===1?'1個（接する）　'+K(`x=${fx(rs[0])}`):'2個　'+K(`x=${fx(rs[0])},\\ ${fx(rs[1])}`)));
+  h+=irow('y 切片',K(fx(c)));
+  if(O.pos){const s=posSegs(co);h+=irow('f(x)>0',s.length===0?'解なし':s.map(([l,r])=>K((l<-1e5?'':fx(l)+'<')+'x'+(r>1e5?'':'<'+fx(r)))).join(' , ').replace(/^\s*$/,'')+(s.length===1&&s[0][0]<-1e5&&s[0][1]>1e5?'（すべての実数）':''))}
+  if(O.k){const r=solve(a,b,c-O.kv);h+=irow('f(x)=k',`解は ${r.length} 個`+(r.length?'　'+K('x='+r.map(fx).join(',\\ ')):''))}
+  if(O.dom){const mm=domMM(co);h+=irow('定義域',K(`${fx(O.dt)}\\leqq x\\leqq ${fx(O.dt+O.dw)}`));h+=irow('最大値',K(`${fx(mm.max.y)}\\ (x=${fx(mm.max.x)})`));h+=irow('最小値',K(`${fx(mm.min.y)}\\ (x=${fx(mm.min.x)})`))}
+  const ba=b/a;
+  h+=`<details><summary>平方完成の途中式</summary><div class="steps">${K('y='+poly(a,b,c),true)}${K('=\\ '+(Math.abs(a-1)<1e-9?'':fx(a))+'\\left(x^2'+(ba>=0?'+':'-')+fx(Math.abs(ba))+'x\\right)'+(c>=0?'+':'-')+fx(Math.abs(c)),true)}${K('=\\ '+(Math.abs(a-1)<1e-9?'':fx(a))+'\\left\\{\\left(x'+(-p>=0?'+':'-')+fx(Math.abs(p))+'\\right)^2-'+fx(p*p)+'\\right\\}'+(c>=0?'+':'-')+fx(Math.abs(c)),true)}${K('=\\ '+vform(a,p,q),true)}</div></details>`;
+  box.innerHTML=h;
+}
+/* ---------------- state X ---------------- */
+$('#saveX').onclick=()=>{stateX={form:P.form,vals:{...P[P.form]}};$('#backX').disabled=false;logX()};
+$('#backX').onclick=()=>{if(!stateX)return;markGhost();P[stateX.form]={...stateX.vals};if(P.form!==stateX.form)setForm(stateX.form,false);else{syncInputs();afterChange()}};
+function logX(){
+  const box=$('#xlog');if(!stateX){return}
+  if(stateX.form!==P.form){box.textContent='状態Xと式の形が違います（状態Xにもどすと比べられます）。';return}
+  const ch=KEYS[P.form].filter(k=>Math.abs(P[P.form][k]-stateX.vals[k])>1e-9);
+  if(!ch.length){box.innerHTML='状態X のまま';return}
+  box.innerHTML='状態X から '+ch.map(k=>T(LBL[k])).join('，')+(ch.length===1?' だけ':' を')+'変化：'+ch.map(k=>T(`$${fx(stateX.vals[k])}\\to ${fx(P[P.form][k])}$`)).join('，');
+}
+/* ---------------- view options ---------------- */
+function bindOpt(id,key,after){const e=$(id);e.checked=O[key];e.addEventListener('change',()=>{O[key]=e.checked;if(after)after();afterChange(true)})}
+bindOpt('#oGhost','ghost',()=>{if(!O.ghost)ghost=null});
+bindOpt('#oTrail','trail',()=>{trail=[]});
+bindOpt('#oPos','pos');
+bindOpt('#oK','k',()=>{$('#kBox').style.display=O.k?'':'none'});
+bindOpt('#oDom','dom',()=>{$('#domBox').style.display=O.dom?'':'none'});
+function bindNum(nid,rid,key,lo,hi){const n=$(nid),r=$(rid);const set=v=>{v=Math.min(hi,Math.max(lo,rnd(Math.round(v*10)/10)));O[key]=v;n.value=v;r.value=v;afterChange(true)};n.value=O[key];r.value=O[key];r.addEventListener('input',()=>set(+r.value));n.addEventListener('change',()=>set(+n.value));return set}
+bindNum('#kNum','#kRng','kv',-10,10);bindNum('#dtNum','#dtRng','dt',-10,10);bindNum('#dwNum','#dwRng','dw',0.5,10);
+$('#clrTrail').onclick=()=>{trail=[];ghost=null;draw()};
+document.querySelectorAll('#formSeg button').forEach(b=>b.onclick=()=>{if(mode==='pred'&&pred&&!pred.done)return;if(mode==='mis'){mis.form=b.dataset.f}setForm(b.dataset.f)});
+function setStep(s){STEP=s;document.querySelectorAll('#stepSeg button').forEach(b=>b.classList.toggle('on',+b.dataset.s===s));syncInputs()}
+document.querySelectorAll('#stepSeg button').forEach(b=>b.onclick=()=>setStep(+b.dataset.s));
+function syncOptUI(){$('#oGhost').checked=O.ghost;$('#oTrail').checked=O.trail;$('#oPos').checked=O.pos;$('#oK').checked=O.k;$('#oDom').checked=O.dom;$('#kBox').style.display=O.k?'':'none';$('#domBox').style.display=O.dom?'':'none';$('#kNum').value=O.kv;$('#kRng').value=O.kv;$('#dtNum').value=O.dt;$('#dtRng').value=O.dt;$('#dwNum').value=O.dw;$('#dwRng').value=O.dw}
+/* ---------------- predict mode ---------------- */
+const PRED=[
+ {q:'$y=x^2$ で $p$ を $0$ から $3$ に変えると，頂点はどこへ移動するか。',i:['v',[1,0,0]],t:['v',[1,3,0]],kind:'tap'},
+ {q:'$y=(x-1)^2+2$ で $q$ を $2$ から $-3$ に変えると，頂点はどこへ移動するか。',i:['v',[1,1,2]],t:['v',[1,1,-3]],kind:'tap'},
+ {q:'$y=x^2+bx$ で $b$ を $0$ から $-4$ に変えると，頂点はどこへ移動するか。',i:['g',[1,0,0]],t:['g',[1,-4,0]],kind:'tap'},
+ {q:'$y=x^2+bx$ で $b$ を $2$ から $-2$ に変えると，頂点はどこへ移動するか。',i:['g',[1,2,0]],t:['g',[1,-2,0]],kind:'tap'},
+ {q:'$y=x^2-2x+c$ で $c$ を $1$ から $-3$ に変えると，頂点はどこへ移動するか。',i:['g',[1,-2,1]],t:['g',[1,-2,-3]],kind:'tap'},
+ {q:'$y=ax^2-4x+3$ で $a$ を $1$ から $2$ に変えると，頂点はどこへ移動するか。',i:['g',[1,-4,3]],t:['g',[2,-4,3]],kind:'tap'},
+ {q:'$y=-x^2+bx+3$ で $b$ を $2$ から $-2$ に変えると，頂点はどこへ移動するか。',i:['g',[-1,2,3]],t:['g',[-1,-2,3]],kind:'tap'},
+ {q:'$y=ax^2+4x$ で $a$ を $2$ から $-2$ に変えると，頂点はどこへ移動するか。',i:['g',[2,4,0]],t:['g',[-2,4,0]],kind:'tap'},
+ {q:'$y=a(x-1)^2$ で $a$ を $2$ から $-2$ に変えると，頂点はどこへ移動するか。',i:['v',[2,1,0]],t:['v',[-2,1,0]],kind:'tap'},
+ {q:'3点 A$(-1,0)$，B$(1,0)$，C$(0,-1)$ を通る放物線で，C を $(0,2)$ に動かすと，頂点はどこへ移動するか。',i:['t',[-1,0,1,0,0,-1]],t:['t',[-1,0,1,0,0,2]],kind:'tap'},
+ {q:'$y=x^2+bx+1$ で $b$ を $-4$ から $4$ まで少しずつ動かすと，頂点はどんな線をえがくか。',i:['g',[1,-4,1]],t:['g',[1,4,1]],kind:'choice',trail:true,ch:['$x$ 軸に平行な直線','傾きのある直線','上に凸の放物線','下に凸の放物線'],ans:2},
+ {q:'$y=ax^2+2x+1$ で $a$ を $0.5$ から $4$ まで少しずつ動かすと，頂点はどんな線をえがくか。',i:['g',[0.5,2,1]],t:['g',[4,2,1]],kind:'choice',trail:true,ch:['$x$ 軸に平行な直線','傾きのある直線','上に凸の放物線','下に凸の放物線'],ans:1},
+ {q:'$f(x)=(x+2)^2-1$ から $a,\\ p,\\ q$ のうち1つだけを変えて，不等式 $f(x)>0$ の解をすべての実数にしたい。変える文字はどれか。',i:['v',[1,-2,-1]],t:['v',[1,-2,1]],kind:'choice',pos:true,ch:['$a$ だけ','$p$ だけ','$q$ だけ','どれを変えてもできない'],ans:2},
+ {q:'$y=x^2-4x+c$ で $c$ を $0$ から大きくしていく。グラフが $x$ 軸と接するのは $c$ がいくつのときか。',i:['g',[1,-4,0]],t:['g',[1,-4,4]],kind:'choice',ch:['$2$','$3$','$4$','$5$'],ans:2},
+ {q:'$y=a(x-1)^2+4$ で $a$ を $-1$ から $-3$ に変えるとき，変わらないものはどれか。',i:['v',[-1,1,4]],t:['v',[-3,1,4]],kind:'choice',ch:['頂点の位置','$y$ 切片','$x$ 軸との共有点','グラフの開き具合'],ans:0},
+];
+function loadVals(form,arr){const o={};KEYS[form].forEach((k,i)=>o[k]=arr[i]);P[form]=o;P.form=form}
+function startPred(i){
+  pred={i,mark:null,choice:null,done:false,correct:null};const pr=PRED[i];
+  loadVals(pr.i[0],pr.i[1]);ghost=null;trail=[];O.trail=!!pr.trail;O.pos=!!pr.pos;O.k=false;O.dom=false;syncOptUI();
+  lock={};buildParams();G.cx=0;G.cy=0;G.sc=36;afterChange();renderPred();
+}
+function renderPred(){
+  const pr=PRED[pred.i],c=$('#modeCard');
+  let h=`<h3>予想 ${pred.i+1} / ${PRED.length}</h3><div class="qtext">${T(pr.q)}</div>`;
+  if(pr.kind==='tap')h+=`<div class="mini" style="margin-top:6px">${pred.done?'':'グラフの上をタップして，予想した頂点の位置に印をつけよう。'}</div>`;
+  else{h+='<div class="choices">'+pr.ch.map((s,j)=>{let cl='';if(pred.done){if(j===pr.ans)cl='right';else if(j===pred.choice)cl='wrong'}else if(j===pred.choice)cl='sel';return `<button data-j="${j}" class="${cl}">${CIR[j]}　${T(s)}</button>`}).join('')+'</div>'}
+  if(pred.fb)h+=`<div class="fb ${pred.ok?'ok':'ng'}">${pred.fb}</div>`;
+  h+=`<div class="row2"><button class="btn" id="pPrev" ${pred.i===0?'disabled':''}>前へ</button>`+(pred.done?`<button class="btn" id="pRe">もう一度</button>`:`<button class="btn pri" id="pChk">答え合わせ</button>`)+`<button class="btn" id="pNext" ${pred.i===PRED.length-1?'disabled':''}>次へ</button></div>`;
+  if(pred.done)h+='<div class="mini" style="margin-top:6px">係数を自由に動かして確かめられます。</div>';
+  c.innerHTML=h;
+  c.querySelectorAll('.choices button').forEach(b=>b.onclick=()=>{if(pred.done)return;pred.choice=+b.dataset.j;renderPred()});
+  $('#pPrev').onclick=()=>startPred(pred.i-1);$('#pNext').onclick=()=>startPred(pred.i+1);
+  if($('#pRe'))$('#pRe').onclick=()=>startPred(pred.i);
+  if($('#pChk'))$('#pChk').onclick=checkPred;
+}
+let animId=0;
+function animateTo(form,arr,ms,done){
+  const from={...P[form]},to={};KEYS[form].forEach((k,i)=>to[k]=arr[i]);const id=++animId;const t0=performance.now();
+  const step=now=>{if(id!==animId)return;let s=Math.min(1,(now-t0)/ms);const e=s<.5?2*s*s:1-Math.pow(-2*s+2,2)/2;
+    for(const k of KEYS[form])P[form][k]=from[k]+(to[k]-from[k])*e;syncInputs();afterChange();
+    if(s<1)requestAnimationFrame(step);else{for(const k of KEYS[form])P[form][k]=to[k];syncInputs();afterChange();done&&done()}};
+  requestAnimationFrame(step);
+}
+function checkPred(){
+  const pr=PRED[pred.i];
+  if(pr.kind==='tap'&&!pred.mark){pred.fb='先にグラフをタップして予想しよう。';pred.ok=false;renderPred();return}
+  if(pr.kind==='choice'&&pred.choice==null){pred.fb='先に選択肢を選ぼう。';pred.ok=false;renderPred();return}
+  const co=coef();ghost=co.err?null:co;pred.fb='';renderPred();
+  animateTo(pr.t[0],pr.t[1],1300,()=>{
+    pred.done=true;
+    if(pr.kind==='tap'){const v=vertexOf(coefOf(pr.t[0],P[pr.t[0]]));pred.correct=v;const d=Math.hypot(v.x-pred.mark.x,v.y-pred.mark.y);pred.ok=d<0.6;pred.fb=(pred.ok?'ほぼ正解。':'ずれがあります。')+`正しい頂点は (${fxm(v.x)}, ${fxm(v.y)})，予想とのずれは ${fx(Math.round(d*10)/10)} です。`}
+    else{pred.ok=pred.choice===pr.ans;pred.fb=pred.ok?'正解。':'正解は '+CIR[pr.ans]+' です。'}
+    syncInputs();draw();renderPred();
+  });
+}
+/* ---------------- mission mode ---------------- */
+function newMission(){
+  const As=[0.5,1,2,-0.5,-1,-2,1,-1];const a=As[Math.floor(Math.random()*As.length)];const p=Math.floor(Math.random()*9)-4,q=Math.floor(Math.random()*9)-4;
+  const form=mis?mis.form:'g';mis={form,target:{a,b:-2*a*p,c:a*p*p+q},fb:'',ok:false,score:mis?mis.score:0,tries:mis?mis.tries:0,hint:false};
+  P.v={a:1,p:0,q:0};P.g={a:1,b:0,c:0};P.t={ax:-1,ay:1,bx:0,by:0,cx:1,cy:1};P.form=form;ghost=null;trail=[];lock={};buildParams();G.cx=0;G.cy=0;G.sc=32;afterChange();renderMis();
+}
+function renderMis(){
+  const fn={v:'$a(x-p)^2+q$（標準形）',g:'$ax^2+bx+c$（一般形）',t:'3点を通る'}[mis.form];
+  let h=`<h3>ミッション</h3><div class="qtext">点線のグラフにぴったり重ねよう。<br>使う式の形：${T(fn)}</div><div class="mini">式の形は下のボタンで変えられます。</div>`;
+  if(mis.hint){const v=vertexOf(mis.target);h+=`<div class="mini" style="margin-top:6px">ヒント：目標の頂点は (${fxm(v.x)}, ${fxm(v.y)})，${mis.target.a>0?'下に凸':'上に凸'}，$a$ の値は ${fxm(mis.target.a)}</div>`.replace(/\$a\$/,K('a'))}
+  if(mis.fb)h+=`<div class="fb ${mis.ok?'ok':'ng'}">${mis.fb}</div>`;
+  h+=`<div class="row2"><button class="btn pri" id="mChk">判定</button><button class="btn" id="mHint">ヒント</button><button class="btn" id="mNew">次のミッション</button></div><div class="mini" style="margin-top:6px">成功 ${mis.score} 回 / 判定 ${mis.tries} 回</div>`;
+  $('#modeCard').innerHTML=h;
+  $('#mChk').onclick=()=>{const co=coef();mis.tries++;if(co.err){mis.ok=false;mis.fb='エラーでグラフが表示されていません。'}else{const t=mis.target;const ok=Math.abs(co.a-t.a)<0.02&&Math.abs(co.b-t.b)<0.02&&Math.abs(co.c-t.c)<0.02;mis.ok=ok;if(ok){mis.score++;mis.fb='ぴったり一致しました。'}else{const v=vertexOf(co),w=vertexOf(t);const msg=[];if(!v||Math.hypot(v.x-w.x,v.y-w.y)>0.02)msg.push('頂点の位置');if(Math.abs(co.a-t.a)>=0.02)msg.push('開き具合（a）');mis.fb='まだ違います：'+msg.join('と')+'がずれています。'}}renderMis()};
+  $('#mHint').onclick=()=>{mis.hint=true;renderMis()};$('#mNew').onclick=newMission;
+}
+/* ---------------- mode switching ---------------- */
+function setMode(m){
+  animId++;mode=m;document.querySelectorAll('#modeTabs .tab').forEach(b=>b.classList.toggle('on',b.dataset.m===m));
+  $('#appView').style.display=m==='ex'?'none':'';$('#exView').style.display=m==='ex'?'':'none';
+  $('#modeCard').style.display=(m==='pred'||m==='mis')?'':'none';
+  $('#ghint').textContent=m==='pred'?'答え合わせの前は係数を動かせません':'ドラッグで移動，ホイールやボタンで拡大・縮小';
+  if(m==='pred')startPred(pred?pred.i:0);
+  else if(m==='mis')newMission();
+  else if(m==='ex'){if(!EX.cur)newEx()}
+  else{pred=null;buildParams();afterChange()}
+  if(m!=='ex')requestAnimationFrame(resize);
+}
+document.querySelectorAll('#modeTabs .tab').forEach(b=>b.onclick=()=>setMode(b.dataset.m));
+/* =================================================================
+   Worksheet generation
+================================================================= */
+function rngOf(seed){let t=seed>>>0;return()=>{t+=0x6D2B79F5;let r=Math.imul(t^t>>>15,1|t);r^=r+Math.imul(r^r>>>7,61|r);return((r^r>>>14)>>>0)/4294967296}}
+const ri=(R,lo,hi)=>lo+Math.floor(R()*(hi-lo+1));
+const pick=(R,a)=>a[Math.floor(R()*a.length)];
+function shuffle(R,a){a=a.slice();for(let i=a.length-1;i>0;i--){const j=Math.floor(R()*(i+1));[a[i],a[j]]=[a[j],a[i]]}return a}
+function mkB(){const B={list:[],i:0,groups:[]};B.take=(ans,q)=>{ans=String(ans);let ks='';for(const ch of ans){const k=KANA[B.i++];B.list.push({k,a:ch,q});ks+=k}return ks};return B}
+const BX=k=>`<span class="bx">${k}</span>`;
+const BT=k=>`\\boxed{\\text{${k}}}`;
+const OPS={a:{n:'操作A',v:'a'},p:{n:'操作P',v:'p'},q:{n:'操作Q',v:'q'}};
+const PROPS=[
+ {t:'不等式 $f(x)>0$ の解がすべての実数となること',c:'$a>0$ かつ $q>0$',f:(a,p,q)=>a>0&&q>EPS},
+ {t:'不等式 $f(x)>0$ の解がないこと',c:'$a<0$ かつ $q\\leqq 0$',f:(a,p,q)=>a<0&&q<=EPS},
+ {t:'不等式 $f(x)<0$ の解がすべての実数となること',c:'$a<0$ かつ $q<0$',f:(a,p,q)=>a<0&&q<-EPS},
+ {t:'不等式 $f(x)<0$ の解がないこと',c:'$a>0$ かつ $q\\geqq 0$',f:(a,p,q)=>a>0&&q>=-EPS},
+ {t:'方程式 $f(x)=0$ が異なる2つの正の解をもつこと',c:'$aq<0$（$x$ 軸と2点で交わる），軸 $p>0$，$af(0)>0$',f:(a,p,q)=>a*q<-EPS&&p>EPS&&a*(a*p*p+q)>EPS},
+ {t:'方程式 $f(x)=0$ が異なる2つの負の解をもつこと',c:'$aq<0$（$x$ 軸と2点で交わる），軸 $p<0$，$af(0)>0$',f:(a,p,q)=>a*q<-EPS&&p<-EPS&&a*(a*p*p+q)>EPS},
+ {t:'方程式 $f(x)=0$ が正の解と負の解を1つずつもつこと',c:'$af(0)<0$',f:(a,p,q)=>a*(a*p*p+q)<-EPS},
+ {t:'方程式 $f(x)=0$ がただ1つの実数解をもつこと',c:'$q=0$（頂点が $x$ 軸上）',f:(a,p,q)=>Math.abs(q)<=EPS},
+ {t:'$y=f(x)$ のグラフが原点を通ること',c:'$f(0)=ap^2+q=0$',f:(a,p,q)=>Math.abs(a*p*p+q)<=EPS},
+];
+const CATS=[
+ {t:'$x$ 軸の負の部分と異なる2点で交わる下に凸の放物線',c:'$a>0,\\ p<0,\\ q<0,\\ f(0)>0$',f:(a,p,q)=>a>0&&q<0&&p<0&&a*p*p+q>0},
+ {t:'$x$ 軸の正の部分と異なる2点で交わる下に凸の放物線',c:'$a>0,\\ p>0,\\ q<0,\\ f(0)>0$',f:(a,p,q)=>a>0&&q<0&&p>0&&a*p*p+q>0},
+ {t:'$x$ 軸の負の部分と異なる2点で交わる上に凸の放物線',c:'$a<0,\\ p<0,\\ q>0,\\ f(0)<0$',f:(a,p,q)=>a<0&&q>0&&p<0&&a*p*p+q<0},
+ {t:'$x$ 軸の正の部分と異なる2点で交わる上に凸の放物線',c:'$a<0,\\ p>0,\\ q>0,\\ f(0)<0$',f:(a,p,q)=>a<0&&q>0&&p>0&&a*p*p+q<0},
+ {t:'頂点が第4象限にあり，$x$ 軸の正の部分と負の部分で1点ずつ交わる下に凸の放物線',c:'$a>0,\\ p>0,\\ q<0,\\ f(0)<0$',f:(a,p,q)=>a>0&&q<0&&p>0&&a*p*p+q<0},
+ {t:'頂点が第2象限にあり，$x$ 軸の正の部分と負の部分で1点ずつ交わる上に凸の放物線',c:'$a<0,\\ p<0,\\ q>0,\\ f(0)>0$',f:(a,p,q)=>a<0&&q>0&&p<0&&a*p*p+q>0},
+ {t:'$x$ 軸と共有点をもたず，頂点が第1象限にある下に凸の放物線',c:'$a>0,\\ p>0,\\ q>0$',f:(a,p,q)=>a>0&&q>0&&p>0},
+ {t:'$x$ 軸と共有点をもたず，頂点が第3象限にある上に凸の放物線',c:'$a<0,\\ p<0,\\ q<0$',f:(a,p,q)=>a<0&&q<0&&p<0},
+];
+function candVals(op,a,p,q){
+  const L=[];
+  if(op==='a'){for(let i=1;i<=400;i++){const v=Math.pow(10,(i-200)/50);L.push(v,-v)}if(Math.abs(p)>EPS)L.push(-q/(p*p))}
+  else{for(let i=-600;i<=600;i++)L.push(i/10);if(op==='p'){if(-q/a>=0){const r=Math.sqrt(-q/a);L.push(r,-r)}}else L.push(-a*p*p)}
+  return L;
+}
+function achievable(pi,op,a,p,q){
+  const f=PROPS[pi].f;
+  for(const v of candVals(op,a,p,q)){if(op==='a'){if(Math.abs(v)<1e-12)continue;if(f(v,p,q))return true}else if(op==='p'){if(f(a,v,q))return true}else{if(f(a,p,v))return true}}
+  return false;
+}
+const catCache={};
+function catTable(ci){
+  if(catCache[ci])return catCache[ci];
+  const R=rngOf(9001+ci),cat=CATS[ci],S=[];
+  while(S.length<24){const a=(R()<.5?-1:1)*(0.2+R()*3),p=-6+R()*12,q=-6+R()*12;if(cat.f(a,p,q))S.push([a,p,q])}
+  const tab=PROPS.map((pr,pi)=>{
+    if(S.some(s=>pr.f(...s)))return{ok:false};
+    const ops={};let ok=true;
+    for(const op of ['a','p','q']){const r=S.map(s=>achievable(pi,op,...s));if(r.some(x=>x!==r[0])){ok=false;break}ops[op]=r[0]}
+    return{ok,ops};
+  });
+  return catCache[ci]=tab;
+}
+function setIdx(o){const k=(o.a?'A':'')+(o.p?'P':'')+(o.q?'Q':'');return['','A','P','Q','AP','AQ','PQ','APQ'].indexOf(k)}
+const SETCH=['ない','操作Aだけである','操作Pだけである','操作Qだけである','操作Aと操作Pだけである','操作Aと操作Qだけである','操作Pと操作Qだけである','操作Aと操作Pと操作Qのすべてである'];
+function repVals(R,cat){for(let i=0;i<400;i++){const a=pick(R,[0.5,1,2,-0.5,-1,-2]),p=ri(R,-4,4),q=ri(R,-5,5);if(p!==0&&q!==0&&cat.f(a,p,q)&&Math.abs(a*p*p+q)>=1)return[a,p,q]}return null}
+/* ---------- figures ---------- */
+let svgN=0;
+function keyPts(a,b,c){const v=vertexOf({a,b,c});const r=[[v.x,v.y],[0,c]];for(const x of solve(a,b,c))r.push([x,0]);const H=Math.max(2.5,Math.abs(v.y)*0.9,Math.abs(c-v.y)*0.8);const d=Math.sqrt(H/Math.abs(a));r.push([v.x-d,v.y+Math.sign(a)*H],[v.x+d,v.y+Math.sign(a)*H]);return r}
+function fitView(pts,pad=0.18){const xs=pts.map(p=>p[0]).concat(0),ys=pts.map(p=>p[1]).concat(0);let x0=Math.min(...xs),x1=Math.max(...xs),y0=Math.min(...ys),y1=Math.max(...ys);const dx=Math.max(x1-x0,2),dy=Math.max(y1-y0,2);return[x0-dx*pad,x1+dx*pad,y0-dy*pad,y1+dy*pad]}
+function graphSVG(o){
+  const w=o.w||220,h=o.h||170,[x0,x1,y0,y1]=o.v,sx=x=>(x-x0)/(x1-x0)*w,sy=y=>h-(y-y0)/(y1-y0)*h,id='cl'+(++svgN);
+  let s=`<svg viewBox="0 0 ${w} ${h}" width="${w}" height="${h}" class="gsvg"><defs><clipPath id="${id}"><rect x="0" y="0" width="${w}" height="${h}"/></clipPath></defs>`;
+  const ox=sx(0),oy=sy(0);
+  s+=`<line x1="0" y1="${oy}" x2="${w}" y2="${oy}" class="ax"/><path d="M${w} ${oy} l-6 -3 v6z"/><line x1="${ox}" y1="${h}" x2="${ox}" y2="0" class="ax"/><path d="M${ox} 0 l-3 6 h6z"/>`;
+  s+=`<text x="${w-2}" y="${oy+13}" text-anchor="end">x</text><text x="${ox+5}" y="10">y</text><text x="${ox-11}" y="${oy+13}">O</text>`;
+  for(const cu of (o.curves||[])){const[a,b,c]=cu.co;let d='';const N=160;for(let i=0;i<=N;i++){const x=x0+(x1-x0)*i/N,y=a*x*x+b*x+c;const Y=Math.max(-50,Math.min(h+50,sy(y)));d+=(i?'L':'M')+sx(x).toFixed(1)+' '+Y.toFixed(1)}s+=`<path d="${d}" class="${cu.cls||'cv'}" clip-path="url(#${id})"/>`}
+  for(const L of (o.lines||[])){s+=`<line x1="${sx(L[0])}" y1="${sy(L[1])}" x2="${sx(L[2])}" y2="${sy(L[3])}" class="cvd" clip-path="url(#${id})"/>`}
+  for(const p of (o.pts||[])){s+=`<circle cx="${sx(p.x)}" cy="${sy(p.y)}" r="2.6"/>`;if(p.lab)s+=`<text class="up" x="${sx(p.x)+(p.dx||4)}" y="${sy(p.y)+(p.dy||-4)}">${p.lab}</text>`}
+  return s+'</svg>';
+}
+function softFig(kind,rows,g){
+  const head={v:'y=a(x−p)²+q',g:'y=ax²+bx+c',t:'3点を通る放物線'}[kind];
+  let pn=`<div class="sform">${head}</div>`;
+  if(kind==='t'){for(const r of rows)pn+=`<div class="srow">${r.n}( <span class="sbox">${r.x}</span>, <span class="sbox">${r.y}</span> )</div>`}
+  else for(const r of rows)pn+=`<div class="srow"><i>${r.n}</i>=<span class="sbox">${r.val}</span></div><div class="sl"><i style="left:${r.pos}%"></i></div>`;
+  return `<div class="soft"><div class="sbar"><i></i><i></i><i></i><i></i></div><div class="sbody"><div class="spanel">${pn}</div><div>${g}</div></div></div>`;
+}
+const sliderPos=(v,lo,hi)=>Math.round(8+84*(v-lo)/(hi-lo));
+function talk(lines){return '<div class="talk">'+lines.map(([w,s])=>`<div>${w}：${T(s)}</div>`).join('')+'</div>'}
+function optsBox(arr,cls){return `<div class="opts ${cls||''}">`+arr.map((s,i)=>`<div>${CIR[i]}　${T(s)}</div>`).join('')+'</div>'}
+const opQ=['操作A：[状態X] から $p$，$q$ の値は変えず，$a$ の値だけを変化させる。','操作P：[状態X] から $a$，$q$ の値は変えず，$p$ の値だけを変化させる。','操作Q：[状態X] から $a$，$p$ の値は変えず，$q$ の値だけを変化させる。'];
+function softIntro(){return '関数 $f(x)=a(x-p)^2+q$ について，$y=f(x)$ のグラフをコンピュータのグラフ表示ソフトを用いて表示させる。このソフトでは，$a$，$p$，$q$ の値を入力すると，その値に応じたグラフが表示される。さらに，それぞれの入力欄の下にある●を左に動かすと値が減少し，右に動かすと値が増加するようになっており，値の変化に応じて関数のグラフが画面上で変化する仕組みになっている。'}
+function stateFig(rep){const[a,p,q]=rep;const co={a,b:-2*a*p,c:a*p*p+q};const v=fitView(keyPts(co.a,co.b,co.c));return softFig('v',[{n:'a',val:'',pos:62},{n:'p',val:'',pos:38},{n:'q',val:'',pos:71}],graphSVG({w:200,h:150,v,curves:[{co:[co.a,co.b,co.c]}]}))}
+const st=(f,arr,o)=>'st='+f+','+arr.map(x=>rnd(x)).join(',')+(o?'&'+o:'');
+/* ---------- type 1 ---------- */
+function g1(R,B){
+  for(let tries=0;tries<800;tries++){
+    const ci=ri(R,0,CATS.length-1),cat=CATS[ci],tab=catTable(ci);
+    const ok=PROPS.map((_,i)=>i).filter(i=>tab[i].ok);if(ok.length<2)continue;
+    const p1=pick(R,ok),p2=pick(R,ok);if(p1===p2)continue;
+    const i1=setIdx(tab[p1].ops),i2=setIdx(tab[p2].ops);if(i1===i2)continue;
+    const rep=repVals(R,cat);if(!rep)continue;
+    const k1=B.take(i1,1),k2=B.take(i2,1);
+    let h=`<p>${T(softIntro())}</p><p>${T('最初に，$a$，$p$，$q$ をある値に定めたところ，図1のように，'+cat.t+'が表示された。この状態を [状態X] とする。')}</p>`;
+    h+=`<div class="figs"><div>${stateFig(rep)}<div class="figcap">図1</div></div></div>`;
+    h+=`<p>${T('次の操作A，操作P，操作Q のうち，いずれか一つの操作を行い，関数 $f(x)$ について考える。ただし，$a$ の値は $0$ にしないものとする。')}</p>`;
+    h+=`<div class="ops">${opQ.map(s=>`<div>${T(s)}</div>`).join('')}</div>`;
+    h+=`<p>${T(`このとき，操作A，操作P，操作Q のうち，「${PROPS[p1].t}」が起こり得る操作は ${BX(k1)}。また，「${PROPS[p2].t}」が起こり得る操作は ${BX(k2)}。`)}</p>`;
+    h+=`<p>${BX(k1)}，${BX(k2)} に当てはまるものを，次の⓪〜⑦のうちから一つずつ選べ。ただし，同じものを繰り返し選んでもよい。</p>`+optsBox(SETCH);
+    const sol=[p1,p2].map((pi,j)=>{const o=tab[pi].ops;return `<h4>${[k1,k2][j]}</h4><p>${T('「'+PROPS[pi].t+'」となる条件は '+PROPS[pi].c+' である。')}</p><p>${T('[状態X] は '+cat.c+' を満たす。')}</p><p>${T(['a','p','q'].map(op=>`${OPS[op].n}（$${op}$ だけ変える）：${o[op]?'起こり得る':'起こり得ない'}`).join('<br>'))}</p><p>よって ${CIR[[i1,i2][j]]}</p>`}).join('');
+    return{title:'操作で起こり得るか',body:h,subs:[{q:1,check:st('v',rep,'o=g'+(PROPS[p1].t.includes('>0')||PROPS[p1].t.includes('<0')?'s':''))}],sol:`<p>${T('[状態X] の例：$a='+fx(rep[0])+',\\ p='+fx(rep[1])+',\\ q='+fx(rep[2])+'$（図1）')}</p>`+sol,meta:{ci,rep,props:[p1,p2],ans:[i1,i2]}};
+  }
+  throw new Error('g1 failed');
+}
+/* ---------- type 6 ---------- */
+const OXCH=['○○○','○○×','○×○','○××','×○○','×○×','××○','×××'];
+function oxIdx(b){return(b[0]?0:4)+(b[1]?0:2)+(b[2]?0:1)}
+function g6(R,B){
+  for(let tries=0;tries<800;tries++){
+    const ci=ri(R,0,CATS.length-1),cat=CATS[ci],tab=catTable(ci);
+    const ok=PROPS.map((_,i)=>i).filter(i=>tab[i].ok);if(ok.length<3)continue;
+    const ps=shuffle(R,ok).slice(0,3);
+    const ops=shuffle(R,['a','p','q']).slice(0,2);
+    const res=ops.map(op=>ps.map(pi=>tab[pi].ops[op]));
+    if(res.some(r=>r.every(x=>x)||r.every(x=>!x)))continue;
+    const idx=res.map(oxIdx);if(idx[0]===idx[1])continue;
+    const rep=repVals(R,cat);if(!rep)continue;
+    const ks=idx.map(i=>B.take(i,1));
+    let h=`<p>${T(softIntro())}</p><p>${T('最初に，$a$，$p$，$q$ をある値に定めたところ，図1のように，'+cat.t+'が表示された。この状態を [状態X] とする。')}</p>`;
+    h+=`<div class="figs"><div>${stateFig(rep)}<div class="figcap">図1</div></div></div>`;
+    h+=`<p>次の (i)〜(iii) のことが起こり得るかどうかを調べる。起こり得るときは○，起こり得ないときは×で表す。ただし，${K('a')} の値は ${K('0')} にしないものとする。</p>`;
+    h+=`<div class="ops">${ps.map((pi,j)=>`<div>(${['i','ii','iii'][j]})　${T(PROPS[pi].t)}</div>`).join('')}</div>`;
+    h+=ops.map((op,j)=>`<p class="sub">(${j+1})　${T(`[状態X] から $${op}$ の値だけを変化させるとき，(i)，(ii)，(iii) の○，×の組合せとして正しいものは `)}${BX(ks[j])} である。</p>`).join('');
+    h+=`<p>${BX(ks[0])}，${BX(ks[1])} に当てはまるものを，次の⓪〜⑦のうちから一つずつ選べ。ただし，同じものを繰り返し選んでもよい。</p>`;
+    h+=optsBox(OXCH.map(s=>`(i)：${s[0]}　(ii)：${s[1]}　(iii)：${s[2]}`));
+    const sol=`<p>${T('[状態X] は '+cat.c+' を満たす（例：$a='+fx(rep[0])+',\\ p='+fx(rep[1])+',\\ q='+fx(rep[2])+'$）。')}</p>`+ps.map((pi,j)=>`<p>(${['i','ii','iii'][j]}) ${T('の条件は '+PROPS[pi].c)}</p>`).join('')+ops.map((op,j)=>`<h4>${ks[j]}（${T('$'+op+'$ だけ変える')}）</h4><p>${res[j].map((x,i)=>`(${['i','ii','iii'][i]}) ${x?'○':'×'}`).join('　')}　よって ${CIR[idx[j]]}</p>`).join('');
+    return{title:'○×の組合せ',body:h,subs:[{q:1,check:st('v',rep,'o=g')}],sol,meta:{ci,rep,props:ps,ops,ans:idx}};
+  }
+  throw new Error('g6 failed');
+}
+/* ---------- type 2 ---------- */
+function signedBlank(B,v,q){return{s:v<0?'-':'+',k:B.take(Math.abs(v),q)}}
+function g2(R,B){
+  for(let tries=0;tries<2000;tries++){
+    const a=pick(R,[1,-1,2,-2]),h=pick(R,[-3,-2,-1,1,2,3]),m=ri(R,-6,6);
+    const b=-2*a*h,c=a*h*h+m;if(c===0||m===0)continue;
+    const pool=[];for(let x=h-3;x<=h+3;x++)pool.push(x);
+    const xs=shuffle(R,pool).slice(0,3).sort((u,v)=>u-v);
+    const ys=xs.map(x=>a*x*x+b*x+c);if(ys.some(y=>Math.abs(y)>12))continue;
+    if(xs.includes(h))continue;
+    const kind=h>0?'正':'負';const step=pick(R,[1,2]);
+    const lo=Math.min(m,c)-2,hi=Math.max(m,c)+10;const k0=ri(R,lo,hi);
+    const ks=[0,1,2,3,4,5].map(i=>k0-i*step);
+    const tr=ks.map(k=>{const D=b*b-4*a*(c-k);return D>0&&(c-k)/a>0});
+    if(tr.filter(x=>x).length!==1)continue;
+    const ans=tr.indexOf(true);
+    const A=signedBlank(B,a,1),Bb=signedBlank(B,b,1),C=signedBlank(B,c,1);const kk=B.take(ans,2);
+    const pts=xs.map((x,i)=>({n:'ABC'[i],x,y:ys[i]}));
+    const v=fitView(keyPts(a,b,c).concat(pts.map(p=>[p.x,p.y])));
+    const g=graphSVG({w:210,h:160,v,curves:[{co:[a,b,c]}],pts:pts.map(p=>({x:p.x,y:p.y,lab:p.n}))});
+    let H=`<p>${T('2次関数のグラフをコンピュータのグラフ表示ソフトを用いて表示させる。このソフトでは，3点 A，B，C の座標を入力すると，その3点を通る2次関数 $y=f(x)$ のグラフが表示される。')}</p>`;
+    H+=`<p>${T('最初に，A，B，C の座標として '+pts.map(p=>`${p.n}$(${p.x},\\ ${p.y})$`).join('，')+' を入力したところ，図1のような放物線が表示された。')}</p>`;
+    H+=`<div class="figs"><div>${softFig('t',pts.map(p=>({n:p.n,x:p.x,y:p.y})),g)}<div class="figcap">図1</div></div></div>`;
+    H+=`<p class="sub">(1)　図1の放物線を表す関数は $f(x)=${a<0?'-':''}${BT(A.k)}x^2${Bb.s}${BT(Bb.k)}x${C.s}${BT(C.k)}$ である。</p>`.replace(/\$([^$]+)\$/g,(m0,t)=>K(t));
+    H+=`<p class="sub">(2)　${T('図1の放物線 $y=f(x)$ に対し，方程式の解について正しく記述したものは ')}${BX(kk)} である。</p><p>${BX(kk)} の解答群</p>`;
+    H+=optsBox(ks.map(k=>`方程式 $f(x)=${k}$ は異なる2つの${kind}の解をもつ。`),'one');
+    const kAns=ks[ans],f0=c;
+    const sol=`<h4>(1)</h4><p>${T(`$f(x)=ax^2+bx+c$ に3点の座標を代入して連立方程式を解くと $a=${a},\\ b=${b},\\ c=${c}$。よって $f(x)=${poly(a,b,c)}=${vform(a,h,m)}$`)}</p><h4>(2)</h4><p>${T(`$y=f(x)$ と直線 $y=k$ が ${kind==='正'?'$x>0$':'$x<0$'} の部分で異なる2点で交わればよい。頂点は $(${h},\\ ${m})$，$y$ 切片は $${f0}$ なので，${a>0?`$${m}<k<${f0}$`:`$${f0}<k<${m}$`}$ のとき異なる2つの${kind}の解をもつ。`)}</p><p>${T(`よって $k=${kAns}$ の ${CIR[ans]}`)}</p>`;
+    return{title:'3点の入力と方程式の解',body:H,subs:[{q:1,check:st('t',pts.flatMap(p=>[p.x,p.y]),'o=g')},{q:2,check:st('t',pts.flatMap(p=>[p.x,p.y]),'o=k&k='+kAns)}],sol,meta:{a,b,c,pts,ks,ans,kind}};
+  }
+  throw new Error('g2 failed');
+}
+/* ---------- type 3 ---------- */
+const col=(P3)=>{const[[x1,y1],[x2,y2],[x3,y3]]=P3;return(x2-x1)*(y3-y1)-(y2-y1)*(x3-x1)===0};
+const sameX=(P3)=>{const xs=P3.map(p=>p[0]);return new Set(xs).size<3};
+function g3(R,B){
+  for(let tries=0;tries<3000;tries++){
+    const kinds=pick(R,[['x','l'],['l','l'],['x','l'],['l','x']]);
+    const bad=kinds.map(k=>{
+      if(k==='x'){const u=ri(R,-2,3);let v;do{v=ri(R,-2,3)}while(v===u);const y1=ri(R,-3,4);let y2;do{y2=ri(R,-3,4)}while(y2===y1);const arr=shuffle(R,[[u,y1],[u,y2],[v,ri(R,-3,4)]]);return arr.sort((p,q)=>p[0]-q[0])}
+      const m=pick(R,[-2,-1,1,2]),n=ri(R,-2,3);const xs=shuffle(R,[-2,-1,0,1,2,3]).slice(0,3).sort((p,q)=>p-q);return xs.map(x=>[x,m*x+n]);
+    });
+    const good=[];let guard=0;
+    while(good.length<4&&guard++<200){
+      const xs=shuffle(R,[-2,-1,0,1,2,3]).slice(0,3).sort((p,q)=>p-q);let P3;
+      if(good.length===0){const y=ri(R,-3,4);P3=[[xs[0],y],[xs[1],ri(R,-3,4)],[xs[2],y]]}
+      else if(good.length===1){const m=pick(R,[-1,1,2]),n=ri(R,-2,2);P3=xs.map(x=>[x,m*x+n]);P3[2][1]+=pick(R,[1,-1])}
+      else P3=xs.map(()=>ri(R,-3,5));
+      if(!Array.isArray(P3[0]))P3=xs.map((x,i)=>[x,P3[i]]);
+      if(sameX(P3)||col(P3))continue;good.push(P3);
+    }
+    if(good.length<4)continue;
+    const all=shuffle(R,[...bad.map(p=>({p,bad:true})),...good.map(p=>({p,bad:false}))]);
+    if(all.some(o=>o.p.some(q=>Math.abs(q[1])>9)))continue;
+    const badIdx=all.map((o,i)=>o.bad?i:-1).filter(i=>i>=0);
+    if(badIdx.length!==2)continue;
+    // part 2
+    const x1=ri(R,0,4);let x2;do{x2=ri(R,0,7)}while(x2===x1||Math.abs(x2-x1)>4);
+    const m=pick(R,[-3,-2,-1,1,2,3]),y1=ri(R,-4,4),y2=y1+m*(x2-x1);if(Math.abs(y2)>9)continue;
+    let x3;do{x3=ri(R,-3,8)}while(x3===x1||x3===x2);const y3=y1+m*(x3-x1);if(Math.abs(y3)>20)continue;
+    const kA=B.take(badIdx[0],1),kB=B.take(badIdx[1],1);B.groups.push([kA,kB]);
+    const kY=B.take(y3,2);const kE=B.take(Math.min(x1,x2),2),kF=B.take(Math.max(x1,x2),2);B.groups.push([kE,kF]);
+    const fmtP=P3=>P3.map((q,i)=>`${'ABC'[i]}$(${q[0]},\\ ${q[1]})$`).join('，');
+    let H=`<p>${T('2次関数のグラフをコンピュータのグラフ表示ソフトを用いて表示させる。このソフトでは，3点 A，B，C の座標を入力すると，その3点を通る2次関数のグラフが表示される。ただし，3点 A，B，C の座標を入力しても，その3点を通る2次関数のグラフが存在しない場合，エラーとなりグラフは表示されない。')}</p>`;
+    H+=`<div class="figs"><div>${softFig('t',[{n:'A',x:'',y:''},{n:'B',x:'',y:''},{n:'C',x:'',y:''}],graphSVG({w:150,h:110,v:[-3,3,-2.5,2.5]}))}<div class="figcap">図1（入力前の画面）</div></div></div>`;
+    H+=`<p class="sub">(1)　次の⓪〜⑤のうち，エラーとなりグラフが表示されない3点の組合せを二つ選べ。ただし，解答の順序は問わない。　${BX(kA)}，${BX(kB)}</p>`;
+    H+=optsBox(all.map(o=>fmtP(o.p)));
+    H+=`<p class="sub">(2)　${T(`A$(${x1},\\ ${y1})$，B$(${x2},\\ ${y2})$ を入力したまま，C の $x$ 座標を $${x3}$ にした。このとき，C の $y$ 座標を `)}${BX(kY)} ${T('にすると，エラーとなりグラフは表示されない。')}</p>`;
+    H+=`<p>${T('また，C の $y$ 座標の値に関係なくエラーとなるのは，C の $x$ 座標が ')}${BX(kE)} または ${BX(kF)} のときである。ただし，${BX(kE)}，${BX(kF)} の解答の順序は問わない。</p>`;
+    const why=all.map((o,i)=>o.bad?`${CIR[i]}：${sameX(o.p)?'$x$ 座標が等しい2点がある（関数のグラフは1つの $x$ に1つの $y$ しか対応しない）':'3点が一直線上にある（通るのは直線で，$a\\neq0$ の2次関数にならない）'}`:'').filter(s=>s);
+    const sol=`<h4>(1)</h4><p>${T(why.join('<br>'))}</p><p>よって ${CIR[badIdx[0]]}，${CIR[badIdx[1]]}（順不同）</p><h4>(2)</h4><p>${T(`直線 AB の傾きは $\\dfrac{${y2}-(${y1})}{${x2}-${x1}}=${m}$。C がこの直線上にあると3点が一直線上に並ぶ。$y=${m}(x-${x1})+${y1}$ に $x=${x3}$ を代入して $y=${y3}$。`)}</p><p>${T(`C の $x$ 座標が A または B の $x$ 座標 $${x1},\\ ${x2}$ と等しいときも，常にエラーとなる。`)}</p>`;
+    const colIdx=all.findIndex(o=>o.bad&&!sameX(o.p));
+    return{title:'エラーになる入力',body:H,subs:[{q:1,check:st('t',(colIdx>=0?all[colIdx]:all[badIdx[0]]).p.flat())},{q:2,check:st('t',[x1,y1,x2,y2,x3,y3],'o=g')}],sol,meta:{all,badIdx,x1,y1,x2,y2,x3,y3}};
+  }
+  throw new Error('g3 failed');
+}
+/* ---------- type 4 ---------- */
+const SGCH=[];for(let i=0;i<8;i++)SGCH.push(`$a${i&4?'<':'>'}0,\\ b${i&2?'<':'>'}0,\\ c${i&1?'<':'>'}0$`);
+function sgIdx(a,b,c){return(a<0?4:0)+(b<0?2:0)+(c<0?1:0)}
+function g4(R,B){
+  for(let tries=0;tries<500;tries++){
+    const a=pick(R,[1,-1,2,-2,0.5,-0.5]),h=pick(R,[-2,-1.5,-1,1,1.5,2]),b=-2*a*h,c=pick(R,[-3,-2,-1,1,2,3]);
+    if(Math.abs(c-a*h*h)<0.5)continue;
+    const which=pick(R,['a','b','c','abc']);
+    const flip={a:[-1,1,1],b:[1,-1,1],c:[1,1,-1],abc:[-1,-1,-1]}[which];
+    const vars=[];for(const fa of[1,-1])for(const fb of[1,-1])for(const fc of[1,-1])vars.push([fa,fb,fc]);
+    const isT=f=>f[0]===flip[0]&&f[1]===flip[1]&&f[2]===flip[2];
+    const others=shuffle(R,vars.filter(f=>!isT(f))).slice(0,5);
+    const opts=shuffle(R,[flip,...others]);const ans=opts.findIndex(isT);
+    const all=[];vars.forEach(f=>all.push(...keyPts(a*f[0],b*f[1],c*f[2])));
+    const v=fitView(all,0.08);
+    const k1=B.take(sgIdx(a,b,c),1),k2=B.take(ans,2);
+    let H=`<p>${T('2次関数 $y=ax^2+bx+c$ のグラフをコンピュータのグラフ表示ソフトを用いて表示させたところ，図1のようになった。ただし，図では座標軸の目盛りを省略している。')}</p>`;
+    H+=`<div class="figs"><div>${softFig('g',[{n:'a',val:'',pos:62},{n:'b',val:'',pos:38},{n:'c',val:'',pos:71}],graphSVG({w:190,h:145,v,curves:[{co:[a,b,c]}]}))}<div class="figcap">図1</div></div></div>`;
+    H+=`<p class="sub">(1)　${T('$a$，$b$，$c$ の符号の組合せとして正しいものは ')}${BX(k1)} である。</p>`+optsBox(SGCH);
+    const wtxt=which==='abc'?'$a$，$b$，$c$ のすべて':'$'+which+'$ だけ';
+    H+=`<p class="sub">(2)　${T('図1の状態から，'+wtxt+'について，絶対値は変えずに符号を逆にしたとき，表示されるグラフは ')}${BX(k2)} である。${BX(k2)} に当てはまるものを，次の⓪〜⑤のうちから一つ選べ。</p>`;
+    H+='<div class="gopts">'+opts.map((f,i)=>`<div>${graphSVG({w:150,h:112,v,curves:[{co:[a*f[0],b*f[1],c*f[2]]}]})}<div>${CIR[i]}</div></div>`).join('')+'</div>';
+    const eff={a:'$a$ の符号を変えると，凸の向きが逆になり，軸 $x=-\\dfrac{b}{2a}$ は $y$ 軸に関して反対側へ移る。$y$ 切片 $c$ は変わらない。',b:'$b$ の符号を変えると $f(-x)$ のグラフ，つまり $y$ 軸に関して対称なグラフになる。',c:'$c$ の符号を変えると，凸の向きと軸は変わらず，$y$ 切片だけが $c$ から $-c$ に変わる（グラフ全体が $-2c$ だけ平行移動）。',abc:'すべての符号を変えると $-f(x)$ のグラフ，つまり $x$ 軸に関して対称なグラフになる。'}[which];
+    const sol=`<h4>(1)</h4><p>${T(`グラフが${a>0?'下に凸なので $a>0$':'上に凸なので $a<0$'}。軸 $x=-\\dfrac{b}{2a}$ が $y$ 軸より${h>0?'右（正）':'左（負）'}にあるので $-\\dfrac{b}{2a}${h>0?'>':'<'}0$，よって $b${b>0?'>':'<'}0$。$y$ 切片が${c>0?'正なので $c>0$':'負なので $c<0$'}。`)}</p><p>よって ${CIR[sgIdx(a,b,c)]}</p><h4>(2)</h4><p>${T(eff)}</p><p>よって ${CIR[ans]}</p>`;
+    return{title:'係数の符号とグラフ',body:H,subs:[{q:1,check:st('g',[a,b,c],'o=g')},{q:2,check:st('g',[a,b,c],'o=g')}],sol,meta:{a,b,c,which,opts,ans}};
+  }
+  throw new Error('g4 failed');
+}
+/* ---------- type 5 ---------- */
+const DIRCH=['右上','右下','左上','左下'];
+function dirIdx(dx,dy){return(dx>0?0:2)+(dy>0?0:1)}
+function g5(R,B){
+  const sc=pick(R,['b','a']);
+  if(sc==='b'){
+    let a,c;do{a=pick(R,[1,-1,2,-2]);c=ri(R,-3,3)}while(c===0);
+    const vtx=bb=>({x:-bb/(2*a),y:c-bb*bb/(4*a)});const v0=vtx(0),v1=vtx(0.5);const di=dirIdx(v1.x-v0.x,v1.y-v0.y);
+    const k1=B.take(-2*a,1),k2=B.take(-4*a,1),k3=B.take(c,1),k4=B.take(-a,2),k5=B.take(c,2),k6=B.take(di,3);
+    const fam=[-4,-2,0,2,4].map(bb=>({co:[a,bb,c],cls:'cv2'}));const pts=[-4,-2,0,2,4].map(bb=>{const q=vtx(bb);return{x:q.x,y:q.y}});
+    const v=fitView(pts.map(p=>[p.x,p.y]).concat([[0,c]]),0.35);
+    const g=graphSVG({w:230,h:160,v,curves:[...fam,{co:[-a,0,c],cls:'cvd'}],pts});
+    let H=`<p>${T(`2次関数 $y=ax^2+bx+c$ のグラフをコンピュータのグラフ表示ソフトを用いて表示させる。$a=${a}$，$c=${c}$ に固定して，$b$ の値だけをいろいろに変えたところ，図1のようにグラフの頂点が点線の曲線上を動いた。`)}</p>`;
+    H+=`<div class="figs"><div>${g}<div class="figcap">図1</div></div></div>`;
+    H+=talk([['太郎','$b$ を動かすと，頂点がきれいな曲線の上を動いているね。'],['花子','頂点の座標を $b$ を使って表して，どんな曲線か調べてみよう。']]);
+    H+=`<p class="sub">(1)　${K(`y=${poly(a,0,c).replace(/x\^2/,'x^2+bx')}`)} の頂点の座標は ${K(`\\left(\\dfrac{b}{${BT(k1)}},\\ \\dfrac{b^2}{${BT(k2)}}+${BT(k3)}\\right)`)} である。</p>`;
+    H+=`<p class="sub">(2)　${T('頂点の $x$ 座標を $X$，$y$ 座標を $Y$ として $b$ を消去すると，頂点は放物線 ')}${K(`y=${BT(k4)}x^2+${BT(k5)}`)} の上を動くことがわかる。</p>`;
+    H+=`<p class="sub">(3)　${T('$b$ の値を $0$ から少しずつ大きくしていくとき，頂点は ')}${BX(k6)} へ向かって動き始める。${BX(k6)} に当てはまるものを，次の⓪〜③のうちから一つ選べ。</p>`+optsBox(DIRCH,'four');
+    const sol=`<h4>(1)</h4><p>${T(`$y=${a}\\left(x+\\dfrac{b}{${2*a}}\\right)^2-\\dfrac{b^2}{${4*a}}+${c}$ より，頂点は $\\left(-\\dfrac{b}{${2*a}},\\ -\\dfrac{b^2}{${4*a}}+${c}\\right)=\\left(\\dfrac{b}{${-2*a}},\\ \\dfrac{b^2}{${-4*a}}+${c}\\right)$`)}</p><h4>(2)</h4><p>${T(`$X=\\dfrac{b}{${-2*a}}$ より $b=${-2*a}X$。これを $Y$ に代入して $Y=\\dfrac{${4*a*a}X^2}{${-4*a}}+${c}=${poly(-a,0,c).replace('x','X')}$`)}</p><h4>(3)</h4><p>${T(`$b$ が増えると $X=\\dfrac{b}{${-2*a}}$ は${-2*a>0?'増加（右へ）':'減少（左へ）'}，$Y$ は ${a>0?'減少（下へ）':'増加（上へ）'}。よって ${CIR[di]}`)}</p>`;
+    return{title:'頂点の動き（会話文）',body:H,subs:[{q:1,check:st('g',[a,0,c],'o=gt')},{q:2,check:st('g',[a,-4,c],'o=t')},{q:3,check:st('g',[a,0,c],'o=gt')}],sol,meta:{sc,a,c,ans:[-2*a,-4*a,c,-a,c,di]}};
+  }
+  let b,c;do{b=pick(R,[-6,-4,-2,2,4,6]);c=ri(R,-3,3)}while(c===0);
+  const vtx=aa=>({x:-b/(2*aa),y:c-b*b/(4*aa)});const v0=vtx(1),v1=vtx(1.1);const di=dirIdx(v1.x-v0.x,v1.y-v0.y);
+  const k1=B.take(-b/2,1),k2=B.take(-b*b/4,1),k3=B.take(c,1),k4=B.take(b/2,2),k5=B.take(c,2),k6=B.take(0,3),k7=B.take(c,3),k8=B.take(di,4);
+  const As=[0.5,1,2,-0.5,-1,-2];const fam=As.map(aa=>({co:[aa,b,c],cls:'cv2'}));const pts=As.map(aa=>vtx(aa));
+  const v=fitView(pts.map(p=>[p.x,p.y]),0.3);
+  const g=graphSVG({w:230,h:160,v,curves:fam,lines:[[v[0],b/2*v[0]+c,v[1],b/2*v[1]+c]],pts});
+  let H=`<p>${T(`2次関数 $y=ax^2+bx+c$ のグラフをコンピュータのグラフ表示ソフトを用いて表示させる。$b=${b}$，$c=${c}$ に固定して，$a$ の値だけを $0$ 以外のいろいろな値に変えたところ，図1のようにグラフの頂点が点線の直線上を動いた。`)}</p>`;
+  H+=`<div class="figs"><div>${g}<div class="figcap">図1</div></div></div>`;
+  H+=talk([['太郎','$a$ を動かすと，頂点は直線の上を動いているみたいだ。'],['花子','でも，直線上のすべての点が頂点になるのかな。式で確かめてみよう。']]);
+  H+=`<p class="sub">(1)　${K(`y=ax^2${b>0?'+':''}${b}x${c>0?'+':''}${c}`)} の頂点の座標は ${K(`\\left(\\dfrac{${BT(k1)}}{a},\\ \\dfrac{${BT(k2)}}{a}+${BT(k3)}\\right)`)} である。</p>`;
+  H+=`<p class="sub">(2)　${T('頂点の座標から $a$ を消去すると，頂点は直線 ')}${K(`y=${BT(k4)}x+${BT(k5)}`)} の上にあることがわかる。ただし，この直線上の点 ${K(`(${BT(k6)},\\ ${BT(k7)})`)} は，${K('a')} をどのように変えても頂点にはならない。</p>`;
+  H+=`<p class="sub">(3)　${T('$a$ の値を $1$ から少しずつ大きくしていくとき，頂点は ')}${BX(k8)} へ向かって動き始める。${BX(k8)} に当てはまるものを，次の⓪〜③のうちから一つ選べ。</p>`+optsBox(DIRCH,'four');
+  const sol=`<h4>(1)</h4><p>${T(`$y=a\\left(x+\\dfrac{${b}}{2a}\\right)^2-\\dfrac{${b*b}}{4a}+${c}$ より，頂点は $\\left(\\dfrac{${-b/2}}{a},\\ \\dfrac{${-b*b/4}}{a}+${c}\\right)$`)}</p><h4>(2)</h4><p>${T(`$X=\\dfrac{${-b/2}}{a}$ より $\\dfrac{1}{a}=\\dfrac{X}{${-b/2}}$。$Y=${-b*b/4}\\cdot\\dfrac{X}{${-b/2}}+${c}=${b/2}X+${c}$。また $X=\\dfrac{${-b/2}}{a}\\neq0$ なので，点 $(0,\\ ${c})$ は頂点にならない。`)}</p><h4>(3)</h4><p>${T(`$a$ が $1$ から増えると $X=\\dfrac{${-b/2}}{a}$ は $0$ に近づく（${v1.x>v0.x?'右へ':'左へ'}）。直線の傾きは $${b/2}$ なので，${CIR[di]}`)}</p>`;
+  return{title:'頂点の動き（会話文）',body:H,subs:[{q:1,check:st('g',[1,b,c],'o=gt')},{q:2,check:st('g',[1,b,c],'o=gt')},{q:3,check:st('g',[1,b,c],'o=gt')}],sol,meta:{sc,b,c,ans:[-b/2,-b*b/4,c,b/2,c,0,c,di]}};
+}
+const GENS={1:g1,2:g2,3:g3,4:g4,5:g5,6:g6};
+function gen(type,seed){
+  const R=rngOf(seed*7919+type*104729);const B=mkB();const p=GENS[type](R,B);
+  p.id=`Q${type}-${seed}`;p.type=type;p.seed=seed;p.blanks=B.list;p.groups=B.groups;return p;
+}
+/* ---------- exercise view ---------- */
+const EX={cur:null,marks:{},scored:false};
+function parseId(s){const m=/^\s*Q?([1-6])-(\d{1,6})\s*$/i.exec(s||'');return m?{t:+m[1],s:+m[2]}:null}
+function qrSVG(url){try{const q=qrcode(0,'M');q.addData(url);q.make();return q.createSvgTag(2,0)}catch(e){return ''}}
+function paperHTML(p,withQR){
+  const exURL=PUBLIC_URL+'?ex='+p.id,chkURL=PUBLIC_URL+'?'+p.subs[0].check;
+  let h=`<div class="paper"><div class="phead"><div class="pt"><b>グラフ考察　2次関数　${p.title}</b><div class="pid">問題番号 ${p.id}　／　グラフ考察 共通テスト対策 v${VERSION}</div><div class="name">組　　番　名前 <span></span></div></div>`;
+  if(withQR)h+=`<div class="qrs"><div class="qr">${qrSVG(exURL)}マーク・採点</div><div class="qr">${qrSVG(chkURL)}アプリで確かめる</div></div>`;
+  h+=`</div><div><b>第1問</b></div>${p.body}</div>`;
+  return h;
+}
+function solHTML(p){
+  const ans=[];let cur='';
+  for(const b of p.blanks){ans.push(`${b.k}：${b.a==='-'?'−':b.a}`)}
+  const grp=p.groups.length?`<p class="mini">順不同：${p.groups.map(g=>g.join('，')).join('　')}</p>`:'';
+  return `<div class="paper"><div class="phead"><div class="pt"><b>解答・解説　${p.title}</b><div class="pid">問題番号 ${p.id}</div></div></div><p><b>正解</b>　${ans.join('　')}</p>${grp}${p.sol}</div>`;
+}
+function openEx(type,seed){
+  let p;try{p=gen(type,seed)}catch(e){alert('この番号の問題は作れませんでした。');return}
+  EX.cur=p;EX.marks={};EX.scored=false;$('#exType').value=String(type);$('#exId').value=p.id;
+  $('#paper').innerHTML=paperHTML(p,true);renderMarks();
+}
+function newEx(){const t=+$('#exType').value||1;openEx(t,1000+Math.floor(Math.random()*9000))}
+$('#exNew').onclick=newEx;
+$('#exOpen').onclick=()=>{const r=parseId($('#exId').value);if(!r){alert('問題番号は「Q1-4831」のように入力してください。');return}openEx(r.t,r.s)};
+$('#exPrint').onclick=()=>{if(!EX.cur)return;$('#printArea').innerHTML=paperHTML(EX.cur,true);window.print()};
+$('#exPrintA').onclick=()=>{if(!EX.cur)return;$('#printArea').innerHTML=solHTML(EX.cur);window.print()};
+function blankChoices(p,b){
+  // answer is a choice number when the blank's answer box is a single kana used as choice; detect by meta: digits shown always
+  return ['-','0','1','2','3','4','5','6','7','8','9'];
+}
+function renderMarks(){
+  const p=EX.cur,box=$('#marks');
+  let h=`<h3>マーク入力（${p.id}）</h3><div class="mini">紙で解いたら，答えをマークして「採点する」を押そう。</div>`;
+  for(const b of p.blanks){
+    let cls='';if(EX.scored)cls=EX.res[b.k]?'ok':'ng';
+    h+=`<div class="mrow ${cls}"><span class="kn">${b.k}</span><div class="bub">`+blankChoices(p,b).map(ch=>`<button data-k="${b.k}" data-c="${ch}" class="${EX.marks[b.k]===ch?'on':''}">${ch==='-'?'−':ch}</button>`).join('')+'</div>'+(EX.scored&&!EX.res[b.k]?`<span class="mres">正解 ${b.a==='-'?'−':b.a}</span>`:'')+'</div>';
+  }
+  if(p.groups.length)h+=`<div class="mini" style="margin-top:6px">順序を問わない組：${p.groups.map(g=>g.join('，')).join('　')}</div>`;
+  h+=`<div class="row2"><button class="btn pri" id="mScore">採点する</button><button class="btn" id="mClear">やり直す</button></div>`;
+  if(EX.scored){
+    const n=p.blanks.length,c=p.blanks.filter(b=>EX.res[b.k]).length;
+    h+=`<div class="score">${c} / ${n} 正解</div>`;
+    h+='<div class="row2">'+p.subs.map(s=>`<button class="btn" data-chk="${s.check}">アプリで確かめる${p.subs.length>1?'('+s.q+')':''}</button>`).join('')+'</div>';
+    h+=`<div class="sol">${solHTML(p)}</div>`;
+  }
+  box.innerHTML=h;
+  box.querySelectorAll('.bub button').forEach(btn=>btn.onclick=()=>{if(EX.scored)return;const k=btn.dataset.k;EX.marks[k]=EX.marks[k]===btn.dataset.c?undefined:btn.dataset.c;renderMarks()});
+  $('#mScore').onclick=()=>{EX.res=scoreEx(p,EX.marks);EX.scored=true;renderMarks()};
+  $('#mClear').onclick=()=>{EX.marks={};EX.scored=false;renderMarks()};
+  box.querySelectorAll('[data-chk]').forEach(btn=>btn.onclick=()=>{applyQuery(new URLSearchParams(btn.dataset.chk));setMode('obs')});
+}
+function scoreEx(p,marks){
+  const res={};for(const b of p.blanks)res[b.k]=marks[b.k]===b.a;
+  // unordered groups: blanks are joined strings of kana for each member
+  for(const g of p.groups){
+    const members=g.map(ks=>[...ks]);
+    const want=members.map(m=>m.map(k=>p.blanks.find(b=>b.k===k).a).join('')).sort();
+    const got=members.map(m=>m.map(k=>marks[k]||'').join(''));
+    const used=want.slice();const okm=got.map(s=>{const i=used.indexOf(s);if(i>=0){used.splice(i,1);return true}return false});
+    members.forEach((m,i)=>m.forEach(k=>res[k]=okm[i]));
+  }
+  return res;
+}
+/* ---------- URL state ---------- */
+function applyQuery(U){
+  const s=U.get('st');
+  if(s){const a=s.split(',');const f=a[0];if(KEYS[f]&&a.length===KEYS[f].length+1){loadVals(f,a.slice(1).map(Number))}}
+  const o=U.get('o')||'';O.ghost=o.includes('g')||!U.get('o');O.trail=o.includes('t');O.pos=o.includes('s');O.k=o.includes('k');O.dom=o.includes('d');
+  if(U.get('k'))O.kv=+U.get('k');
+  ghost=null;trail=[];lock={};syncOptUI();buildParams();
+  const co=coef();if(!co.err){const v=vertexOf(co);if(v){G.cx=Math.max(-6,Math.min(6,Math.round(v.x/2)));G.cy=Math.max(-6,Math.min(6,Math.round(v.y/2)))}}
+  afterChange();
+}
+/* ---------- self test ---------- */
+function selfTest(n=150){
+  const out=[];let bad=0;
+  const near=(x,y)=>Math.abs(x-y)<1e-6;
+  for(let t=1;t<=6;t++){
+    let ok=0;const errs=[];
+    for(let s=1;s<=n;s++){
+      try{
+        const p=gen(t,s),q=gen(t,s);
+        if(JSON.stringify(p.blanks)!==JSON.stringify(q.blanks))throw 'not deterministic';
+        if(!p.blanks.length||p.blanks.some(b=>!/^[-0-9]$/.test(b.a)))throw 'bad blank';
+        const m=p.meta,A=p.blanks.map(b=>b.a).join('');
+        if(t===1||t===6){
+          const[a,pp,qq]=m.rep;if(!CATS[m.ci].f(a,pp,qq))throw 'rep not in cat';
+          if(t===1){m.props.forEach((pi,j)=>{if(PROPS[pi].f(a,pp,qq))throw 'already true';const o={a:achievable(pi,'a',a,pp,qq),p:achievable(pi,'p',a,pp,qq),q:achievable(pi,'q',a,pp,qq)};if(setIdx(o)!==m.ans[j])throw 'set mismatch'})}
+          else{m.ops.forEach((op,j)=>{const r=m.props.map(pi=>achievable(pi,op,a,pp,qq));if(oxIdx(r)!==m.ans[j])throw 'ox mismatch'})}
+        }
+        if(t===2){const P3={ax:m.pts[0].x,ay:m.pts[0].y,bx:m.pts[1].x,by:m.pts[1].y,cx:m.pts[2].x,cy:m.pts[2].y};const co=fromPts(P3);if(!near(co.a,m.a)||!near(co.b,m.b)||!near(co.c,m.c))throw 'coef';
+          const exp=String(Math.abs(m.a))+String(Math.abs(m.b))+String(Math.abs(m.c))+m.ans;if(A!==exp)throw 'blank2';
+          const tr=m.ks.map(k=>{const r=solve(co.a,co.b,co.c-k);return r.length===2&&r.every(x=>m.kind==='正'?x>1e-9:x<-1e-9)});if(tr.filter(x=>x).length!==1||!tr[m.ans])throw 'statement';}
+        if(t===3){const bi=m.all.map((o,i)=>{const P3={ax:o.p[0][0],ay:o.p[0][1],bx:o.p[1][0],by:o.p[1][1],cx:o.p[2][0],cy:o.p[2][1]};return fromPts(P3).err?i:-1}).filter(i=>i>=0);if(bi.join()!==m.badIdx.join())throw 'error set';
+          if(!fromPts({ax:m.x1,ay:m.y1,bx:m.x2,by:m.y2,cx:m.x3,cy:m.y3}).err)throw 'collinear';if(fromPts({ax:m.x1,ay:m.y1,bx:m.x2,by:m.y2,cx:m.x3,cy:m.y3+1}).err)throw 'not collinear';}
+        if(t===4){const{a,b,c}=m;if(sgIdx(a,b,c)!==+p.blanks[0].a)throw 'sign';const f=m.opts[m.ans];const w={a:[-1,1,1],b:[1,-1,1],c:[1,1,-1],abc:[-1,-1,-1]}[m.which];if(f.join()!==w.join())throw 'graph';const keys=m.opts.map(o=>o.join());if(new Set(keys).size!==6)throw 'dup';}
+        if(t===5){const v=m.ans;
+          if(m.sc==='b'){const{a,c}=m;for(const bb of[-3,-1,2,5]){const X=-bb/(2*a),Y=c-bb*bb/(4*a);if(!near(X,bb/v[0])||!near(Y,bb*bb/v[1]+v[2])||!near(Y,v[3]*X*X+v[4]))throw 'locus b'}
+            const d0={x:0,y:c},d1={x:-0.01/(2*a),y:c-0.0001/(4*a)};if(dirIdx(d1.x-d0.x,d1.y-d0.y)!==v[5])throw 'dir b'}
+          else{const{b,c}=m;for(const aa of[-3,-0.5,0.7,4]){const X=-b/(2*aa),Y=c-b*b/(4*aa);if(!near(X,v[0]/aa)||!near(Y,v[1]/aa+v[2])||!near(Y,v[3]*X+v[4]))throw 'locus a'}
+            if(v[5]!==0||v[6]!==c)throw 'excluded';const d0={x:-b/2,y:c-b*b/4},d1={x:-b/2.02,y:c-b*b/4.04};if(dirIdx(d1.x-d0.x,d1.y-d0.y)!==v[7])throw 'dir a'}
+          const exp=v.map(x=>String(x)).join('');if(A!==exp)throw 'blank5';}
+        ok++;
+      }catch(e){bad++;if(errs.length<3)errs.push(`seed ${s}: ${e}`)}
+    }
+    out.push(`型${t}: ${ok}/${n} 合格`+(errs.length?'  '+errs.join(' / '):''));
+  }
+  return{text:out.join('\n'),bad};
+}
+/* ---------- dialog ---------- */
+$('#verTxt').textContent=VERSION;
+$('#infoBtn').onclick=()=>$('#infoDlg').showModal();
+$('#dlgClose').onclick=()=>$('#infoDlg').close();
+$('#stBtn').onclick=()=>{$('#stOut').textContent='検算中…';setTimeout(()=>{const r=selfTest(150);$('#stOut').textContent=r.text+'\n'+(r.bad?'不合格 '+r.bad+' 件':'すべて合格')},30)};
+/* ---------- boot ---------- */
+window.addEventListener('resize',()=>{if(mode!=='ex')resize()});
+setStep(0.1);buildParams();
+(function boot(){
+  const U=new URLSearchParams(location.search);
+  if(U.get('ex')){const r=parseId(U.get('ex'));setMode('ex');if(r)openEx(r.t,r.s);return}
+  if(U.get('st'))applyQuery(U);
+  const m=U.get('m');setMode(['pred','mis'].includes(m)?m:'obs');
+})();
+</script>
+</body>
+</html>
