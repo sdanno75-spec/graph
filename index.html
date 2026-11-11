@@ -60,6 +60,7 @@ details summary{cursor:pointer;font-size:13px;color:var(--acc);margin-top:6px}
 .choices button.sel{border-color:var(--acc);background:var(--acc-soft)}
 .choices button.right{border-color:var(--ok);background:#ebfbee}
 .choices button.wrong{border-color:var(--ng);background:#fff5f5}
+.cureq{margin-top:8px;background:#f7f8fa;border-left:3px solid var(--acc);border-radius:4px;padding:6px 10px;font-size:15px;line-height:1.6}
 .fb{margin-top:8px;font-size:14px;font-weight:600}
 .fb.ok{color:var(--ok)} .fb.ng{color:var(--ng)}
 .mini{font-size:12px;color:var(--sub)}
@@ -123,6 +124,9 @@ select,input.txt{padding:6px 8px;border:1px solid var(--line);border-radius:6px;
 .gsvg .cvd{stroke:#000;stroke-width:1.4;fill:none;stroke-dasharray:4 3}
 .gsvg text{font-family:"Times New Roman",serif;font-size:12px;font-style:italic}
 .gsvg text.up{font-style:normal}
+.gsvg text.tk{font-style:normal;font-size:10.5px}
+.gsvg .gd{stroke:#000;stroke-width:.6;stroke-dasharray:2 2}
+.paper .opts.five{grid-template-columns:repeat(5,minmax(0,1fr))}
 #printArea{display:none}
 dialog{border:1px solid var(--line);border-radius:10px;max-width:640px;width:92vw;padding:18px}
 dialog::backdrop{background:rgba(0,0,0,.35)}
@@ -146,8 +150,8 @@ dialog::backdrop{background:rgba(0,0,0,.35)}
 <header>
   <h1>グラフ考察<small>共通テスト対策</small></h1>
   <div class="tabs" id="fnTabs">
-    <button class="tab on">2次関数</button>
-    <button class="tab" disabled title="準備中">三角関数</button>
+    <button class="tab on" data-fn="quad">2次関数</button>
+    <button class="tab" data-fn="trig">三角関数</button>
     <button class="tab" disabled title="準備中">指数・対数</button>
     <button class="tab" disabled title="準備中">3次関数</button>
     <button class="tab" disabled title="準備中">二次曲線</button>
@@ -166,17 +170,14 @@ dialog::backdrop{background:rgba(0,0,0,.35)}
     <div class="gwrap" id="gwrap">
       <canvas id="cv"></canvas>
       <div class="zoom"><button id="zin" title="拡大">+</button><button id="zout" title="縮小">−</button><button id="zhome" title="原点にもどす" style="font-size:12px">O</button></div>
-      <div class="hint" id="ghint">ドラッグで移動，ホイールやボタンで拡大・縮小</div>
+      <div class="hint" id="ghint">頂点をドラッグ：位置が動く（2つの値が同時に変わる）／線をドラッグ：開き具合 a が変わる／何もない所をドラッグ：画面が動く</div>
     </div>
     <div class="side" id="side">
       <div class="card" id="modeCard" style="display:none"></div>
       <div class="card" id="paramCard">
         <h3>式の形と係数</h3>
-        <div class="seg" id="formSeg">
-          <button data-f="v">a(x−p)²+q</button>
-          <button data-f="g">ax²+bx+c</button>
-          <button data-f="t">3点を通る</button>
-        </div>
+        <div class="seg" id="formSeg"></div>
+        <div class="seg" id="fnSeg" style="margin-top:6px;display:none"><button data-tf="sin">sin</button><button data-tf="cos">cos</button></div>
         <div id="params"></div>
         <div class="row2">刻み
           <div class="seg" id="stepSeg" style="flex:0 0 auto"><button data-s="0.1">0.1</button><button data-s="0.5">0.5</button><button data-s="1">1</button></div>
@@ -186,8 +187,9 @@ dialog::backdrop{background:rgba(0,0,0,.35)}
         <h3>表示</h3>
         <div class="chk">
           <label><input type="checkbox" id="oGhost" checked>前のグラフを残す</label>
-          <label><input type="checkbox" id="oTrail">頂点の跡</label>
-          <label><input type="checkbox" id="oPos">f(x)&gt;0 の範囲</label>
+          <label><input type="checkbox" id="oTrail"><span id="oTrailL">頂点の跡</span></label>
+          <label id="oPosL"><input type="checkbox" id="oPos">f(x)&gt;0 の範囲</label>
+          <label id="oBaseL" style="display:none"><input type="checkbox" id="oBase">y=sin x を重ねる</label>
           <label><input type="checkbox" id="oK">直線 y=k</label>
           <label><input type="checkbox" id="oDom">定義域</label>
         </div>
@@ -196,8 +198,8 @@ dialog::backdrop{background:rgba(0,0,0,.35)}
           <input type="range" id="kRng" min="-10" max="10" step="0.1">
         </div>
         <div id="domBox" style="display:none">
-          <div class="prow"><div class="ptop"><span class="lab">左端 t</span><input type="number" id="dtNum" step="0.1"></div><input type="range" id="dtRng" min="-10" max="10" step="0.1"></div>
-          <div class="prow"><div class="ptop"><span class="lab">幅</span><input type="number" id="dwNum" step="0.1" min="0.5"></div><input type="range" id="dwRng" min="0.5" max="10" step="0.1"></div>
+          <div class="prow"><div class="ptop"><span class="lab" id="dtL">左端 t</span><input type="number" id="dtNum" step="0.1"></div><input type="range" id="dtRng" min="-10" max="10" step="0.1"></div>
+          <div class="prow"><div class="ptop"><span class="lab" id="dwL">幅</span><input type="number" id="dwNum" step="0.1" min="0.5"></div><input type="range" id="dwRng" min="0.5" max="10" step="0.1"></div>
         </div>
         <div class="row2"><button class="btn" id="clrTrail">跡を消す</button><button class="btn" id="saveX">状態Xとして記録</button><button class="btn" id="backX" disabled>状態Xにもどす</button></div>
         <div class="log" id="xlog">状態Xを記録すると，そこから何を変えたかがここに出ます。</div>
@@ -209,19 +211,13 @@ dialog::backdrop{background:rgba(0,0,0,.35)}
     <div>
       <div class="card" style="margin-bottom:10px">
         <div class="row2" style="margin-top:0">
-          <select id="exType">
-            <option value="1">型1 操作で起こり得るか</option>
-            <option value="2">型2 3点の入力と方程式の解</option>
-            <option value="3">型3 エラーになる入力</option>
-            <option value="4">型4 係数の符号とグラフ</option>
-            <option value="5">型5 頂点の動き（会話文）</option>
-            <option value="6">型6 ○×の組合せ</option>
-          </select>
+          <select id="exType"></select>
           <button class="btn pri" id="exNew">新しい問題</button>
           <span class="mini">問題番号</span><input class="txt" id="exId" style="width:110px" placeholder="例 Q1-4831"><button class="btn" id="exOpen">開く</button>
           <span class="spacer"></span>
           <button class="btn" id="exPrint">問題を印刷</button><button class="btn" id="exPrintA">解答・解説を印刷</button>
         </div>
+        <div class="row2"><span class="mini">全部の型をまとめて（1型1枚）</span><button class="btn" id="allNew">新しい組を作る</button><button class="btn" id="allPrint">まとめて問題を印刷</button><button class="btn" id="allPrintA">まとめて解答・解説を印刷</button><span class="mini" id="allIds"></span></div>
       </div>
       <div class="paperwrap"><div id="paper"></div></div>
     </div>
@@ -240,7 +236,7 @@ dialog::backdrop{background:rgba(0,0,0,.35)}
 </dialog>
 <script>
 'use strict';
-const VERSION='0.1.0';
+const VERSION='0.4.0';
 const PUBLIC_URL='https://sdanno75-spec.github.io/graph/';
 const KANA='アイウエオカキクケコサシスセソタチツテトナニヌネノハヒフヘホマミムメモ';
 const CIR='⓪①②③④⑤⑥⑦⑧⑨';
@@ -263,12 +259,24 @@ function vform(a,p,q){
   return s;
 }
 /* ---------------- state ---------------- */
-const P={form:'v',v:{a:1,p:0,q:0},g:{a:1,b:0,c:0},t:{ax:-1,ay:0,bx:0,by:-1,cx:1,cy:0}};
-const KEYS={v:['a','p','q'],g:['a','b','c'],t:['ax','ay','bx','by','cx','cy']};
-const LBL={a:'$a$',p:'$p$',q:'$q$',b:'$b$',c:'$c$',ax:'A の $x$',ay:'A の $y$',bx:'B の $x$',by:'B の $y$',cx:'C の $x$',cy:'C の $y$'};
-const RANGE={a:[-5,5],p:[-10,10],q:[-10,10],b:[-10,10],c:[-10,10],ax:[-10,10],ay:[-10,10],bx:[-10,10],by:[-10,10],cx:[-10,10],cy:[-10,10]};
-const O={ghost:true,trail:false,pos:false,k:false,dom:false,kv:0,dt:-1,dw:3};
+const PI=Math.PI;
+const P={form:'v',v:{a:1,p:0,q:0},g:{a:1,b:0,c:0},t:{ax:-1,ay:0,bx:0,by:-1,cx:1,cy:0},s:{ta:1,tb:1,tp:0,tq:0},e:{ta:1,tb:1,tc:0,tq:0},fn:'sin'};
+const KEYS={v:['a','p','q'],g:['a','b','c'],t:['ax','ay','bx','by','cx','cy'],s:['ta','tb','tp','tq'],e:['ta','tb','tc','tq']};
+const LBL={a:'$a$',p:'$p$',q:'$q$',b:'$b$',c:'$c$',ax:'A の $x$',ay:'A の $y$',bx:'B の $x$',by:'B の $y$',cx:'C の $x$',cy:'C の $y$',ta:'$a$',tb:'$b$',tp:'$p$',tq:'$q$',tc:'$c$'};
+const RANGE={a:[-5,5],p:[-10,10],q:[-10,10],b:[-10,10],c:[-10,10],ax:[-10,10],ay:[-10,10],bx:[-10,10],by:[-10,10],cx:[-10,10],cy:[-10,10],ta:[-3,3],tb:[-4,4],tp:[-2,2],tc:[-4,4],tq:[-3,3]};
+const ANG={tp:1,tc:1};/* stored in units of pi */
+const FORMS={quad:[['v','a(x−p)²+q'],['g','ax²+bx+c'],['t','3点を通る']],trig:[['s','a sin b(x−p)+q'],['e','a sin(bx+c)+q']]};
+let FN='quad';
+const O={ghost:true,trail:false,pos:false,k:false,dom:false,base:false,kv:0,dt:-1,dw:3};
 let STEP=0.1,lock={},ghost=null,trail=[],stateX=null,mode='obs';
+const stepOf=k=>ANG[k]?1/12:STEP;
+const isTrig=()=>FN==='trig';
+/* pi fractions (value r means r*pi) */
+function piParts(r){for(const d of[1,2,3,4,6,8,12,24]){const n=r*d;if(Math.abs(n-Math.round(n))<1e-6)return{n:Math.round(n),d}}return null}
+function piTex(r){if(Math.abs(r)<1e-9)return '0';const f=piParts(r);if(!f)return fx(r)+'\\pi';const s=f.n<0?'-':'';const n=Math.abs(f.n);const num=n===1?'\\pi':n+'\\pi';return s+(f.d===1?num:`\\frac{${num}}{${f.d}}`)}
+function piTxt(r){if(Math.abs(r)<1e-9)return '0';const f=piParts(r);if(!f)return fx(r)+'π';const s=f.n<0?'−':'';const n=Math.abs(f.n);return s+(n===1?'π':n+'π')+(f.d===1?'':'/'+f.d)}
+function parsePi(s){s=String(s).replace(/\s/g,'').replace(/−/g,'-');if(s==='')return NaN;const hasPi=/π|pi/i.test(s);s=s.replace(/π|pi/ig,'');let m=/^([-+]?)(\d*\.?\d*)(?:\/(\d+\.?\d*))?$/.exec(s);if(!m)return NaN;let num=m[2]===''?1:+m[2];if(!hasPi&&m[2]==='')return NaN;let v=num/(m[3]?+m[3]:1);if(m[1]==='-')v=-v;return v}
+const TF=(fn,t)=>fn==='cos'?Math.cos(t):Math.sin(t);
 let pred=null,mis=null;
 function fromPts(t){
   const x1=t.ax,y1=t.ay,x2=t.bx,y2=t.by,x3=t.cx,y3=t.cy;
@@ -280,15 +288,30 @@ function fromPts(t){
   if(Math.abs(a)<1e-9)return{err:'3点が一直線上にあります'};
   return{a,b,c};
 }
-function coefOf(form,vals){
+function trigOf(fn,a,b,pr,q){return{trig:true,fn,a,b,pr,p:pr*PI,q}}
+function coefOf(form,vals,fn){
+  if(form==='s')return trigOf(fn||P.fn,vals.ta,vals.tb,vals.tp,vals.tq);
+  if(form==='e'){const b=vals.tb;return trigOf(fn||P.fn,vals.ta,b,Math.abs(b)<1e-12?0:-vals.tc/b,vals.tq)}
   if(form==='v'){const{a,p,q}=vals;return{a,b:-2*a*p,c:a*p*p+q}}
   if(form==='g')return{a:vals.a,b:vals.b,c:vals.c};
   return fromPts(vals);
 }
 function coef(){return coefOf(P.form,P[P.form])}
-function vertexOf(co){if(!co||co.err||Math.abs(co.a)<1e-12)return null;return{x:-co.b/(2*co.a),y:co.c-co.b*co.b/(4*co.a)}}
+function vertexOf(co){if(!co||co.err||co.trig||Math.abs(co.a)<1e-12)return null;return{x:-co.b/(2*co.a),y:co.c-co.b*co.b/(4*co.a)}}
+/* trig: reference point (start of one period) and quarter/half handle */
+function trigRef(co){return{x:co.p,y:co.fn==='cos'?co.q+co.a:co.q}}
+function trigHandle(co){if(Math.abs(co.b)<1e-12)return null;const T=2*PI/Math.abs(co.b);const x=co.p+(co.fn==='cos'?T/2:T/4);return{x,y:fval(co,x)}}
+function keyPt(co){return co.trig?trigRef(co):vertexOf(co)}
+function firstMax(co){/* first local max with x>0 */
+  if(co.trig){if(Math.abs(co.b)<1e-12||Math.abs(co.a)<1e-12)return null;const T=2*PI/Math.abs(co.b);const base=co.fn==='cos'?0:PI/2;const th=co.a>0?base:base+PI;/* b(x-p)=th+2n pi */
+    let x=co.p+th/co.b;x=x-Math.floor((x-1e-6)/T)*T;if(x<=1e-6)x+=T;return{x,y:fval(co,x)}}
+  return vertexOf(co)}
 function setForm(f,convert=true){
-  if(convert&&f!==P.form){
+  if(convert&&f!==P.form&&(f==='s'||f==='e')){
+    if(f==='e'){const s=P.s;P.e={ta:s.ta,tb:s.tb,tc:rnd(-s.tb*s.tp,1e6),tq:s.tq}}
+    else{const e=P.e;P.s={ta:e.ta,tb:e.tb,tp:Math.abs(e.tb)<1e-12?0:rnd(-e.tc/e.tb,1e6),tq:e.tq}}
+  }
+  else if(convert&&f!==P.form){
     const co=coef();
     if(!co.err){
       if(f==='v'&&Math.abs(co.a)>1e-9){P.v={a:rnd(co.a,100),p:rnd(-co.b/(2*co.a),100),q:rnd(co.c-co.b*co.b/(4*co.a),100)}}
@@ -299,12 +322,19 @@ function setForm(f,convert=true){
   P.form=f;lock={};buildParams();afterChange(true);
 }
 /* ---------------- params UI ---------------- */
+function buildFormSeg(){
+  const seg=$('#formSeg');seg.innerHTML=FORMS[FN].map(([f,l])=>`<button data-f="${f}">${l}</button>`).join('');
+  seg.querySelectorAll('button').forEach(b=>b.onclick=()=>{if(mode==='pred'&&pred&&!pred.done)return;if(mode==='mis'){mis.form=b.dataset.f}setForm(b.dataset.f)});
+  $('#fnSeg').style.display=isTrig()?'':'none';
+}
 function buildParams(){
   document.querySelectorAll('#formSeg button').forEach(b=>b.classList.toggle('on',b.dataset.f===P.form));
+  document.querySelectorAll('#fnSeg button').forEach(b=>b.classList.toggle('on',b.dataset.tf===P.fn));
   const box=$('#params');let h='';
   for(const k of KEYS[P.form]){
-    const [lo,hi]=RANGE[k];
-    h+=`<div class="prow" id="row_${k}"><div class="ptop"><span class="lab">${T(LBL[k])}</span><input type="number" id="n_${k}" step="${STEP}"><label><input type="checkbox" id="l_${k}">固定</label></div><input type="range" id="r_${k}" min="${lo}" max="${hi}" step="${STEP}"></div>`;
+    const [lo,hi]=RANGE[k];const sp=stepOf(k);
+    const inp=ANG[k]?`<input type="text" class="angin" id="n_${k}" style="width:84px;padding:5px 6px;border:1.5px solid #555;border-radius:2px;font-size:15px;text-align:right;font-family:inherit">`:`<input type="number" id="n_${k}" step="${sp}">`;
+    h+=`<div class="prow" id="row_${k}"><div class="ptop"><span class="lab">${T(LBL[k])}</span>${inp}<label><input type="checkbox" id="l_${k}">固定</label></div><input type="range" id="r_${k}" min="${lo}" max="${hi}" step="${sp}"></div>`;
   }
   box.innerHTML=h;
   for(const k of KEYS[P.form]){
@@ -312,7 +342,7 @@ function buildParams(){
     r.addEventListener('pointerdown',()=>{markGhost()});
     r.addEventListener('keydown',()=>{markGhost()});
     r.addEventListener('input',()=>{setVal(k,+r.value)});
-    n.addEventListener('change',()=>{if(n.value==='')return;markGhost();setVal(k,+n.value)});
+    n.addEventListener('change',()=>{if(n.value==='')return;const v=ANG[k]?parsePi(n.value):+n.value;if(!isFinite(v)){syncInputs();return}markGhost();setVal(k,v)});
     l.addEventListener('change',()=>{lock[k]=l.checked;syncInputs()});
   }
   syncInputs();
@@ -321,20 +351,21 @@ function syncInputs(){
   const disabled=(mode==='pred'&&pred&&!pred.done);
   for(const k of KEYS[P.form]){
     const v=P[P.form][k];const n=$('#n_'+k),r=$('#r_'+k);if(!n)continue;
-    n.value=rnd(v);r.value=v;const lk=!!lock[k]||disabled;n.disabled=lk;r.disabled=lk;
-    $('#row_'+k).classList.toggle('locked',lk);n.step=STEP;r.step=STEP;
+    n.value=ANG[k]?piTxt(v):rnd(v);r.value=v;const lk=!!lock[k]||disabled;n.disabled=lk;r.disabled=lk;
+    $('#row_'+k).classList.toggle('locked',lk);if(!ANG[k])n.step=STEP;r.step=stepOf(k);
   }
 }
 function setVal(k,v){
-  const [lo,hi]=RANGE[k];
-  v=Math.round(v/STEP)*STEP;v=Math.min(hi,Math.max(lo,rnd(v,1e6)));
+  const [lo,hi]=RANGE[k];const sp=stepOf(k);
+  v=Math.round(v/sp)*sp;v=Math.min(hi,Math.max(lo,rnd(v,1e6)));
   P[P.form][k]=v;syncInputs();afterChange();
 }
 function markGhost(){if(O.ghost){const co=coef();ghost=co.err?null:co}}
 function afterChange(silent){
   const co=coef();
-  if(O.trail&&!co.err){const v=vertexOf(co);if(v){const last=trail[trail.length-1];if(!last||Math.hypot(last.x-v.x,last.y-v.y)>1e-6)trail.push(v)}}
+  if(O.trail&&!co.err){const v=keyPt(co);if(v){const last=trail[trail.length-1];if(!last||Math.hypot(last.x-v.x,last.y-v.y)>1e-6)trail.push(v)}}
   draw();showInfo();logX();
+  const ce=document.getElementById('curEq');if(ce)ce.innerHTML=curEqHTML();
 }
 /* ---------------- graph ---------------- */
 const cv=$('#cv'),ctx=cv.getContext('2d');
@@ -342,10 +373,24 @@ const G={cx:0,cy:0,sc:40,W:600,H:400};
 const SX=x=>G.W/2+(x-G.cx)*G.sc,SY=y=>G.H/2-(y-G.cy)*G.sc,IX=px=>(px-G.W/2)/G.sc+G.cx,IY=py=>-(py-G.H/2)/G.sc+G.cy;
 function resize(){const r=cv.parentElement.getBoundingClientRect();const d=window.devicePixelRatio||1;G.W=r.width;G.H=r.height;cv.width=Math.round(r.width*d);cv.height=Math.round(r.height*d);ctx.setTransform(d,0,0,d,0,0);draw()}
 function niceStep(){const c=[0.5,1,2,5,10,20];for(const u of c)if(u*G.sc>=26)return u;return 50}
-function fval(co,x){return co.a*x*x+co.b*x+co.c}
+function fval(co,x){return co.trig?co.a*TF(co.fn,co.b*(x-co.p))+co.q:co.a*x*x+co.b*x+co.c}
+/* roots of f(x)=k in [lo,hi) */
+function rootsK(co,k,lo,hi){
+  if(!co.trig)return solve(co.a,co.b,co.c-k).filter(x=>x>=lo-1e-9&&x<hi-1e-9);
+  const N=4000,h=(hi-lo)/N,out=[];let px=lo,pv=fval(co,lo)-k;
+  if(Math.abs(pv)<1e-9)out.push(lo);
+  for(let i=1;i<=N;i++){const x=lo+i*h,v=fval(co,x)-k;
+    if(Math.abs(v)<1e-9){if(i<N)out.push(x)}
+    else if(pv*v<0&&Math.abs(pv)>=1e-9){let a=px,b=x,fa=pv;for(let j=0;j<60;j++){const m=(a+b)/2,fm=fval(co,m)-k;if(fa*fm<=0)b=m;else{a=m;fa=fm}}out.push((a+b)/2)}
+    else if(i>1){/* tangency: local extremum touching k */}
+    px=x;pv=v}
+  /* tangency check at extrema */
+  if(co.trig&&Math.abs(co.b)>1e-12){const T=2*PI/Math.abs(co.b);for(const th of[0,PI]){const base=(co.fn==='cos'?0:PI/2)+th;let x=co.p+base/co.b;x=x-Math.floor((x-lo)/(T))*T;for(;x<hi-1e-9;x+=T){if(x>=lo-1e-9&&Math.abs(fval(co,x)-k)<1e-9&&!out.some(r=>Math.abs(r-x)<1e-6))out.push(x)}}}
+  return out.sort((a,b)=>a-b).filter((x,i,a)=>i===0||Math.abs(x-a[i-1])>1e-6);
+}
 function drawCurve(co,color,width,dash){
   if(!co||co.err)return;ctx.save();ctx.strokeStyle=color;ctx.lineWidth=width;ctx.setLineDash(dash||[]);ctx.beginPath();
-  let first=true;for(let px=-2;px<=G.W+2;px+=2){const x=IX(px),y=fval(co,x),py=SY(y);if(py<-2000||py>G.H+2000){first=true;continue}if(first){ctx.moveTo(px,py);first=false}else ctx.lineTo(px,py)}
+  let first=true;for(let px=-2;px<=G.W+2;px+=(co.trig?1:2)){const x=IX(px),y=fval(co,x),py=SY(y);if(py<-2000||py>G.H+2000){first=true;continue}if(first){ctx.moveTo(px,py);first=false}else ctx.lineTo(px,py)}
   ctx.stroke();ctx.restore();
 }
 function dot(x,y,color,r=5,label,lpos){
@@ -356,34 +401,38 @@ function dot(x,y,color,r=5,label,lpos){
 function draw(){
   if(!G.W)return;ctx.clearRect(0,0,G.W,G.H);ctx.fillStyle='#fff';ctx.fillRect(0,0,G.W,G.H);
   const u=niceStep(),x0=IX(0),x1=IX(G.W),y0=IY(G.H),y1=IY(0);
+  let ux=u;if(isTrig()){ux=PI/2;for(const c of[PI/12,PI/6,PI/4,PI/2,PI,2*PI])if(c*G.sc>=26){ux=c;break}}
   ctx.lineWidth=1;ctx.strokeStyle='#eef0f3';ctx.beginPath();
-  for(let x=Math.ceil(x0/u)*u;x<=x1;x+=u){ctx.moveTo(SX(x),0);ctx.lineTo(SX(x),G.H)}
+  for(let x=Math.ceil(x0/ux)*ux;x<=x1;x+=ux){ctx.moveTo(SX(x),0);ctx.lineTo(SX(x),G.H)}
   for(let y=Math.ceil(y0/u)*u;y<=y1;y+=u){ctx.moveTo(0,SY(y));ctx.lineTo(G.W,SY(y))}
   ctx.stroke();
   const co=coef();
-  if(O.dom){ctx.fillStyle='rgba(31,95,191,.07)';ctx.fillRect(SX(O.dt),0,O.dw*G.sc,G.H);ctx.strokeStyle='rgba(31,95,191,.5)';ctx.setLineDash([4,4]);ctx.beginPath();ctx.moveTo(SX(O.dt),0);ctx.lineTo(SX(O.dt),G.H);ctx.moveTo(SX(O.dt+O.dw),0);ctx.lineTo(SX(O.dt+O.dw),G.H);ctx.stroke();ctx.setLineDash([])}
+  if(O.dom){const L=domL(),Rr=domR();ctx.fillStyle='rgba(31,95,191,.07)';ctx.fillRect(SX(L),0,(Rr-L)*G.sc,G.H);ctx.strokeStyle='rgba(31,95,191,.5)';ctx.setLineDash([4,4]);ctx.beginPath();ctx.moveTo(SX(L),0);ctx.lineTo(SX(L),G.H);ctx.moveTo(SX(Rr),0);ctx.lineTo(SX(Rr),G.H);ctx.stroke();ctx.setLineDash([])}
   // axes
   ctx.strokeStyle='#333';ctx.lineWidth=1.2;ctx.beginPath();ctx.moveTo(0,SY(0));ctx.lineTo(G.W,SY(0));ctx.moveTo(SX(0),0);ctx.lineTo(SX(0),G.H);ctx.stroke();
   ctx.fillStyle='#555';ctx.font='11px sans-serif';ctx.textAlign='center';
   const lab=(u*G.sc<36)?u*2:u;
-  for(let x=Math.ceil(x0/lab)*lab;x<=x1;x+=lab){if(Math.abs(x)<1e-9)continue;ctx.fillText(fxm(x),SX(x),Math.min(G.H-4,Math.max(12,SY(0)+14)))}
+  if(isTrig()){const lx=(ux*G.sc<44)?ux*2:ux;for(let x=Math.ceil(x0/lx)*lx;x<=x1;x+=lx){if(Math.abs(x)<1e-9)continue;ctx.fillText(piTxt(x/PI),SX(x),Math.min(G.H-4,Math.max(12,SY(0)+14)))}}
+  else for(let x=Math.ceil(x0/lab)*lab;x<=x1;x+=lab){if(Math.abs(x)<1e-9)continue;ctx.fillText(fxm(x),SX(x),Math.min(G.H-4,Math.max(12,SY(0)+14)))}
   ctx.textAlign='right';
   for(let y=Math.ceil(y0/lab)*lab;y<=y1;y+=lab){if(Math.abs(y)<1e-9)continue;ctx.fillText(fxm(y),Math.min(G.W-4,Math.max(26,SX(0)-5)),SY(y)+4)}
   ctx.font='italic 14px "Times New Roman",serif';ctx.fillStyle='#333';ctx.textAlign='left';ctx.fillText('x',G.W-14,SY(0)-6);ctx.fillText('y',SX(0)+6,13);ctx.fillText('O',SX(0)-14,SY(0)+15);
   // mission target
   if(mode==='mis'&&mis)drawCurve(mis.target,'#d9480f',2.2,[8,6]);
+  if(isTrig()&&O.base)drawCurve(trigOf(P.fn,1,1,0,0),'#e8a33d',1.6,[6,4]);
   if(O.ghost&&ghost)drawCurve(ghost,'#a3adbd',2,[]);
   if(trail.length>1){ctx.save();ctx.strokeStyle='#d9480f';ctx.lineWidth=1.6;ctx.setLineDash([3,4]);ctx.beginPath();trail.forEach((p,i)=>{i?ctx.lineTo(SX(p.x),SY(p.y)):ctx.moveTo(SX(p.x),SY(p.y))});ctx.stroke();ctx.restore()}
-  if(!co.err&&O.pos){
+  if(!co.err&&O.pos&&!co.trig){
     const segs=posSegs(co);ctx.save();ctx.strokeStyle='rgba(43,138,62,.75)';ctx.lineWidth=6;ctx.lineCap='butt';ctx.beginPath();
     for(const [l,r] of segs){const L=Math.max(l,x0-1),Rr=Math.min(r,x1+1);if(L<Rr){ctx.moveTo(SX(L),SY(0));ctx.lineTo(SX(Rr),SY(0))}}ctx.stroke();ctx.restore();
   }
   if(O.k){ctx.save();ctx.strokeStyle='#7048e8';ctx.lineWidth=1.5;ctx.beginPath();ctx.moveTo(0,SY(O.kv));ctx.lineTo(G.W,SY(O.kv));ctx.stroke();ctx.fillStyle='#7048e8';ctx.font='italic 13px "Times New Roman",serif';ctx.fillText('y = '+fxm(O.kv),6,SY(O.kv)-5);ctx.restore();
-    if(!co.err)for(const r of solve(co.a,co.b,co.c-O.kv))dot(r,O.kv,'#7048e8',4);}
+    if(!co.err)for(const r of rootsK(co,O.kv,x0-1,x1+1))dot(r,O.kv,'#7048e8',4);}
   drawCurve(co,'#1f3a7a',2.6);
   if(!co.err){
     const v=vertexOf(co);
     if(v)dot(v.x,v.y,'#1f3a7a',5,'頂点');
+    if(co.trig){const r=trigRef(co);dot(r.x,r.y,'#1f3a7a',5,'基準点',[7,-8]);const hd=trigHandle(co);if(hd)dot(hd.x,hd.y,'#d9480f',5)}
     if(O.dom&&Math.abs(co.a)>1e-12){const mm=domMM(co);dot(mm.max.x,mm.max.y,'#c92a2a',5,'最大');dot(mm.min.x,mm.min.y,'#1f5fbf',5,'最小',[7,16])}
   }
   if(P.form==='t'){const t=P.t;[['A',t.ax,t.ay],['B',t.bx,t.by],['C',t.cx,t.cy]].forEach(([n,x,y])=>dot(x,y,'#000',5,n,[-4,-10]))}
@@ -394,21 +443,72 @@ function draw(){
 }
 function solve(a,b,c){if(Math.abs(a)<1e-12){return Math.abs(b)<1e-12?[]:[-c/b]}const D=b*b-4*a*c;if(D<-1e-9)return[];if(Math.abs(D)<=1e-9)return[-b/(2*a)];const s=Math.sqrt(D);return[(-b-s)/(2*a),(-b+s)/(2*a)].sort((x,y)=>x-y)}
 function posSegs(co){const r=solve(co.a,co.b,co.c);const pts=[-1e6,...r,1e6];const segs=[];for(let i=0;i<pts.length-1;i++){const m=(pts[i]+pts[i+1])/2;if(fval(co,m)>0)segs.push([pts[i],pts[i+1]])}return segs}
-function domMM(co){const l=O.dt,r=O.dt+O.dw,v=vertexOf(co);const c=[l,r];if(v&&v.x>l&&v.x<r)c.push(v.x);const pts=c.map(x=>({x,y:fval(co,x)}));let mx=pts[0],mn=pts[0];for(const p of pts){if(p.y>mx.y+1e-12)mx=p;if(p.y<mn.y-1e-12)mn=p}return{max:mx,min:mn}}
+const domL=()=>isTrig()?O.dt*PI:O.dt,domR=()=>isTrig()?(O.dt+O.dw)*PI:O.dt+O.dw;
+function domMM(co){const l=domL(),r=domR(),v=vertexOf(co);const c=[l,r];if(v&&v.x>l&&v.x<r)c.push(v.x);
+  if(co.trig&&Math.abs(co.b)>1e-12){const T=2*PI/Math.abs(co.b);for(const th of[0,PI]){const base=(co.fn==='cos'?0:PI/2)+th;let x=co.p+base/co.b;x=x-Math.floor((x-l)/T)*T;for(;x<r;x+=T)if(x>l)c.push(x)}}const pts=c.map(x=>({x,y:fval(co,x)}));let mx=pts[0],mn=pts[0];for(const p of pts){if(p.y>mx.y+1e-12)mx=p;if(p.y<mn.y-1e-12)mn=p}return{max:mx,min:mn}}
 /* pan/zoom/drag */
 const ptrs=new Map();let dragPt=null,panStart=null,pinch0=null;
 cv.addEventListener('pointerdown',e=>{
-  cv.setPointerCapture(e.pointerId);const r=cv.getBoundingClientRect();const px=e.clientX-r.left,py=e.clientY-r.top;ptrs.set(e.pointerId,{x:px,y:py});
+  try{cv.setPointerCapture(e.pointerId)}catch(_){}const r=cv.getBoundingClientRect();const px=e.clientX-r.left,py=e.clientY-r.top;ptrs.set(e.pointerId,{x:px,y:py});
   if(ptrs.size===2){const a=[...ptrs.values()];pinch0={d:Math.hypot(a[0].x-a[1].x,a[0].y-a[1].y),sc:G.sc};panStart=null;dragPt=null;return}
   if(mode==='pred'&&pred&&!pred.done&&PRED[pred.i].kind==='tap'){pred.mark={x:IX(px),y:IY(py)};draw();renderPred();return}
   if(P.form==='t'&&!(mode==='pred'&&pred&&!pred.done)){
     const t=P.t;for(const n of ['a','b','c']){const x=t[n+'x'],y=t[n+'y'];if(Math.hypot(SX(x)-px,SY(y)-py)<14&&!lock[n+'x']&&!lock[n+'y']){dragPt=n;markGhost();return}}
   }
+  if(P.form!=='t'&&!(mode==='pred'&&pred&&!pred.done)){
+    const h=hitCurve(px,py);
+    if(h){dragPt=h;dragV0=vertexOf(coef());markGhost();return}
+  }
   panStart={px,py,cx:G.cx,cy:G.cy};cv.style.cursor='grabbing';
 });
+let dragV0=null;
+const canDragV=()=>P.form==='v'?!lock.p&&!lock.q:!lock.b&&!lock.c;
+function hitCurve(px,py){
+  const co=coef();if(co.err)return null;
+  if(co.trig){const r=trigRef(co),hd=trigHandle(co);const pk=P.form==='s'?'tp':'tc';
+    if(Math.hypot(SX(r.x)-px,SY(r.y)-py)<16&&!lock[pk]&&!lock.tq)return 'tref';
+    if(hd&&Math.hypot(SX(hd.x)-px,SY(hd.y)-py)<16&&!lock.ta&&!lock.tb&&!lock[pk])return 'thd';
+    return null}
+  const v=vertexOf(co);if(!v)return null;
+  if(Math.hypot(SX(v.x)-px,SY(v.y)-py)<16&&canDragV())return 'vertex';
+  const x=IX(px);if(Math.abs(x-v.x)*G.sc>18&&Math.abs(SY(fval(co,x))-py)<10&&!lock.a&&(P.form==='v'||canDragV()))return 'open';
+  return null;
+}
+function inR(k,v){const[lo,hi]=RANGE[k];return v>=lo-1e-9&&v<=hi+1e-9}
+function setTrig(a,b,pr,q){/* write into current trig form with rounding */
+  a=rnd(Math.round(a/STEP)*STEP,1e6);b=rnd(Math.round(b/STEP)*STEP,1e6);pr=rnd(Math.round(pr*12)/12,1e6);q=rnd(Math.round(q/STEP)*STEP,1e6);
+  if(Math.abs(a)<1e-9||Math.abs(b)<1e-9||!inR('ta',a)||!inR('tb',b)||!inR('tq',q))return;
+  if(P.form==='s'){if(!inR('tp',pr))return;P.s={ta:a,tb:b,tp:pr,tq:q}}
+  else{const c=rnd(-b*pr,1e6);if(!inR('tc',c))return;P.e={ta:a,tb:b,tc:c,tq:q}}
+}
+function dragCurve(px,py){
+  const s=STEP;
+  if(dragPt==='tref'||dragPt==='thd'){
+    const co=coef();const x=IX(px),y=IY(py);
+    if(dragPt==='tref'){const q=co.fn==='cos'?y-co.a:y;setTrig(co.a,co.b,x/PI,q)}
+    else{const d=Math.abs(x-co.p);if(d<0.05)return;const nb=Math.sign(co.b)*(co.fn==='cos'?PI:PI/2)/d;const na=co.fn==='cos'?co.q-y:(y-co.q)*Math.sign(co.b);setTrig(na,nb,co.pr,co.q)}
+    syncInputs();afterChange();return}
+  if(dragPt==='vertex'){
+    const h=rnd(Math.round(IX(px)/s)*s,1e6),k=rnd(Math.round(IY(py)/s)*s,1e6);
+    if(P.form==='v'){if(!inR('p',h)||!inR('q',k))return;P.v.p=h;P.v.q=k}
+    else{const a=P.g.a,b=rnd(-2*a*h,1e6),c=rnd(a*h*h+k,1e6);if(!inR('b',b)||!inR('c',c))return;P.g.b=b;P.g.c=c}
+  }else{
+    const v=dragV0,x=IX(px),y=IY(py);if(Math.abs(x-v.x)<0.3)return;
+    let a=rnd(Math.round((y-v.y)/((x-v.x)*(x-v.x))/s)*s,1e6);if(Math.abs(a)<1e-9||!inR('a',a))return;
+    if(P.form==='v')P.v.a=a;
+    else{const b=rnd(-2*a*v.x,1e6),c=rnd(a*v.x*v.x+v.y,1e6);if(!inR('b',b)||!inR('c',c))return;P.g.a=a;P.g.b=b;P.g.c=c}
+  }
+  syncInputs();afterChange();
+}
 cv.addEventListener('pointermove',e=>{
-  if(!ptrs.has(e.pointerId))return;const r=cv.getBoundingClientRect();const px=e.clientX-r.left,py=e.clientY-r.top;ptrs.set(e.pointerId,{x:px,y:py});
+  if(!ptrs.has(e.pointerId)){
+    if(e.pointerType==='mouse'&&!(mode==='pred'&&pred&&!pred.done)){const r=cv.getBoundingClientRect();const px=e.clientX-r.left,py=e.clientY-r.top;let c='grab';
+      if(P.form==='t'){const t=P.t;if(['a','b','c'].some(n=>Math.hypot(SX(t[n+'x'])-px,SY(t[n+'y'])-py)<14))c='move'}else{const h=hitCurve(px,py);if(h==='vertex'||h==='tref'||h==='thd')c='move';else if(h)c='ns-resize'}
+      cv.style.cursor=c}
+    return}
+  const r=cv.getBoundingClientRect();const px=e.clientX-r.left,py=e.clientY-r.top;ptrs.set(e.pointerId,{x:px,y:py});
   if(pinch0&&ptrs.size===2){const a=[...ptrs.values()];const d=Math.hypot(a[0].x-a[1].x,a[0].y-a[1].y);G.sc=Math.min(400,Math.max(6,pinch0.sc*d/pinch0.d));draw();return}
+  if(dragPt==='vertex'||dragPt==='open'||dragPt==='tref'||dragPt==='thd'){dragCurve(px,py);return}
   if(dragPt){const s=STEP;let x=Math.round(IX(px)/s)*s,y=Math.round(IY(py)/s)*s;P.t[dragPt+'x']=rnd(x,1e6);P.t[dragPt+'y']=rnd(y,1e6);syncInputs();afterChange();return}
   if(panStart){G.cx=panStart.cx-(px-panStart.px)/G.sc;G.cy=panStart.cy+(py-panStart.py)/G.sc;draw()}
 });
@@ -421,6 +521,7 @@ function irow(k,v){return `<div class="irow"><b>${k}</b><span>${v}</span></div>`
 function showInfo(){
   const co=coef(),box=$('#info');
   if(co.err){box.innerHTML=`<div class="err">エラー：${co.err}。<br>この3点を通る2次関数はないため，グラフは表示されません。</div>`;return}
+  if(co.trig){box.innerHTML=trigInfo(co);return}
   const{a,b,c}=co;let h=irow('一般形',K('y='+poly(a,b,c)));
   if(Math.abs(a)<1e-12){box.innerHTML=h+'<div class="note">a = 0 なので2次関数ではありません（直線）。</div>';return}
   const p=-b/(2*a),q=c-b*b/(4*a),D=b*b-4*a*c;
@@ -438,6 +539,58 @@ function showInfo(){
   h+=`<details><summary>平方完成の途中式</summary><div class="steps">${K('y='+poly(a,b,c),true)}${K('=\\ '+(Math.abs(a-1)<1e-9?'':fx(a))+'\\left(x^2'+(ba>=0?'+':'-')+fx(Math.abs(ba))+'x\\right)'+(c>=0?'+':'-')+fx(Math.abs(c)),true)}${K('=\\ '+(Math.abs(a-1)<1e-9?'':fx(a))+'\\left\\{\\left(x'+(-p>=0?'+':'-')+fx(Math.abs(p))+'\\right)^2-'+fx(p*p)+'\\right\\}'+(c>=0?'+':'-')+fx(Math.abs(c)),true)}${K('=\\ '+vform(a,p,q),true)}</div></details>`;
   box.innerHTML=h;
 }
+/* trig formatting */
+function coefTex(a){return Math.abs(a-1)<1e-9?'':Math.abs(a+1)<1e-9?'-':fx(a)}
+function argTex(b,cr){/* b x + c pi */let s=(Math.abs(b-1)<1e-9?'':Math.abs(b+1)<1e-9?'-':fx(b))+'x';if(Math.abs(cr)>1e-9)s+=(cr>0?'+':'-')+piTex(Math.abs(cr));return s}
+function trigStd(fn,a,b,pr,q){/* a fn b(x-p)+q */
+  const bs=coefTex(b);let s;
+  if(Math.abs(pr)<1e-9)s=coefTex(a)+'\\'+fn+' '+bs+'x';
+  else s=coefTex(a)+'\\'+fn+(bs===''?'':' '+bs)+'\\left(x'+(pr>0?'-':'+')+piTex(Math.abs(pr))+'\\right)';
+  if(Math.abs(q)>1e-9)s+=(q>0?'+':'-')+fx(Math.abs(q));return s}
+function trigExp(fn,a,b,cr,q){let s=coefTex(a)+'\\'+fn+'\\left('+argTex(b,cr)+'\\right)';if(Math.abs(q)>1e-9)s+=(q>0?'+':'-')+fx(Math.abs(q));return s}
+function trigInfo(co){
+  const{a,b,pr,q,fn}=co;let h=irow('式',K('y='+trigStd(fn,a,b,pr,q)));
+  h+=irow('',K('\\phantom{y}='+trigExp(fn,a,b,-b*pr,q)));
+  if(Math.abs(b)<1e-12)return h+'<div class="note">b = 0 なので定数関数です。</div>';
+  if(Math.abs(a)<1e-12)return h+'<div class="note">a = 0 なので定数関数です。</div>';
+  h+=irow('振幅',K(fx(Math.abs(a))));
+  h+=irow('周期',K(`\\dfrac{2\\pi}{|b|}=${piTex(2/Math.abs(b))}`));
+  h+=irow('最大値',K(fx(q+Math.abs(a))));h+=irow('最小値',K(fx(q-Math.abs(a))));
+  h+=irow('値域',K(`${fx(q-Math.abs(a))}\\leqq y\\leqq ${fx(q+Math.abs(a))}`));
+  h+=irow('平行移動',`x 軸方向に ${K(piTex(pr))}，y 軸方向に ${K(fx(q))}`);
+  h+=irow('y 切片',K(fx(fval(co,0))));
+  const fm=firstMax(co);if(fm)h+=irow('x>0 で最初の山',K(`x=${piTex(fm.x/PI)}`));
+  if(O.k){const L=O.dom?domL():0,R=O.dom?domR():2*PI;const r=rootsK(co,O.kv,L,R);h+=irow('f(x)=k',`${O.dom?'定義域':K('0\\leqq x<2\\pi')} で解は ${r.length} 個`)}
+  if(O.dom){const mm=domMM(co);h+=irow('定義域',K(`${piTex(O.dt)}\\leqq x\\leqq ${piTex(O.dt+O.dw)}`));h+=irow('最大値',K(`${fx(mm.max.y)}\\ (x=${piTex(mm.max.x/PI)})`));h+=irow('最小値',K(`${fx(mm.min.y)}\\ (x=${piTex(mm.min.x/PI)})`))}
+  const st=[`${K('y=\\'+fn+' x')} を`];
+  if(Math.abs(Math.abs(a)-1)>1e-9)st.push(`y 軸方向に ${K(fx(Math.abs(a)))} 倍`);
+  if(a<0)st.push(`x 軸に関して対称移動`);
+  if(Math.abs(Math.abs(b)-1)>1e-9)st.push(`x 軸方向に ${K(Math.abs(b)>1?`\\frac{1}{${fx(Math.abs(b))}}`:fx(1/Math.abs(b)))} 倍`);
+  if(b<0)st.push('y 軸に関して対称移動');
+  if(Math.abs(pr)>1e-9)st.push(`x 軸方向に ${K(piTex(pr))} 平行移動`);
+  if(Math.abs(q)>1e-9)st.push(`y 軸方向に ${K(fx(q))} 平行移動`);
+  h+=`<details open><summary>y=${fn} x からの変換の順序</summary><div class="steps">${st.length===1?st[0]+'そのまま':st[0]+'<br>'+st.slice(1).map((s,i)=>(i+1)+'. '+s).join('<br>')}</div></details>`;
+  return h;
+}
+function par(v){return v<0?`(${fx(v)})`:fx(v)}
+function curEqHTML(){
+  const f=P.form,V=P[f],co=coef();let lit,vals;
+  if(f==='s'||f==='e'){
+    const fn=P.fn;const A=par(V.ta),B=par(V.tb),Q=par(V.tq);
+    const pv=f==='s'?V.tp:V.tc,pt=pv<0?`\\left(${piTex(pv)}\\right)`:piTex(pv);
+    vals=`a=${fx(V.ta)},\\ b=${fx(V.tb)},\\ ${f==='s'?'p':'c'}=${piTex(pv)},\\ q=${fx(V.tq)}`;
+    lit=f==='s'?`y=${A}\\${fn} ${B}\\left(x-${pt}\\right)+${Q}`:`y=${A}\\${fn}\\left(${B}x+${pt}\\right)+${Q}`;
+    const simp=K('\\phantom{y}='+(f==='s'?trigStd(fn,co.a,co.b,co.pr,co.q):trigExp(fn,V.ta,V.tb,V.tc,V.tq)));
+    return `<div class="mini">いまの式</div><div>${K(vals)}</div><div>${K(lit)}</div><div>${simp}</div>`;
+  }
+  if(f==='v'){lit=`y=${par(V.a)}\\left(x-${par(V.p)}\\right)^2+${par(V.q)}`;vals=`a=${fx(V.a)},\\ p=${fx(V.p)},\\ q=${fx(V.q)}`}
+  else if(f==='g'){lit=`y=${par(V.a)}x^2+${par(V.b)}x+${par(V.c)}`;vals=`a=${fx(V.a)},\\ b=${fx(V.b)},\\ c=${fx(V.c)}`}
+  else{lit='';vals=`\\mathrm{A}(${fx(V.ax)},\\ ${fx(V.ay)}),\\ \\mathrm{B}(${fx(V.bx)},\\ ${fx(V.by)}),\\ \\mathrm{C}(${fx(V.cx)},\\ ${fx(V.cy)})`}
+  let simp='';
+  if(co.err)simp='<span class="err">エラー（グラフなし）</span>';
+  else{const pre=lit?'\\phantom{y}=':'y=';if(Math.abs(co.a)<1e-12)simp=K(pre+poly(co.a,co.b,co.c))+'（直線）';else{const v=vertexOf(co);simp=K(pre+(f==='g'?poly(co.a,co.b,co.c):vform(co.a,v.x,v.y)))}}
+  return `<div class="mini">いまの式</div><div>${K(vals)}</div>`+(lit?`<div>${K(lit)}</div>`:'')+`<div>${simp}</div>`;
+}
 /* ---------------- state X ---------------- */
 $('#saveX').onclick=()=>{stateX={form:P.form,vals:{...P[P.form]}};$('#backX').disabled=false;logX()};
 $('#backX').onclick=()=>{if(!stateX)return;markGhost();P[stateX.form]={...stateX.vals};if(P.form!==stateX.form)setForm(stateX.form,false);else{syncInputs();afterChange()}};
@@ -452,7 +605,7 @@ function logX(){
 function bindOpt(id,key,after){const e=$(id);e.checked=O[key];e.addEventListener('change',()=>{O[key]=e.checked;if(after)after();afterChange(true)})}
 bindOpt('#oGhost','ghost',()=>{if(!O.ghost)ghost=null});
 bindOpt('#oTrail','trail',()=>{trail=[]});
-bindOpt('#oPos','pos');
+bindOpt('#oPos','pos');bindOpt('#oBase','base');
 bindOpt('#oK','k',()=>{$('#kBox').style.display=O.k?'':'none'});
 bindOpt('#oDom','dom',()=>{$('#domBox').style.display=O.dom?'':'none'});
 function bindNum(nid,rid,key,lo,hi){const n=$(nid),r=$(rid);const set=v=>{v=Math.min(hi,Math.max(lo,rnd(Math.round(v*10)/10)));O[key]=v;n.value=v;r.value=v;afterChange(true)};n.value=O[key];r.value=O[key];r.addEventListener('input',()=>set(+r.value));n.addEventListener('change',()=>set(+n.value));return set}
@@ -461,35 +614,53 @@ $('#clrTrail').onclick=()=>{trail=[];ghost=null;draw()};
 document.querySelectorAll('#formSeg button').forEach(b=>b.onclick=()=>{if(mode==='pred'&&pred&&!pred.done)return;if(mode==='mis'){mis.form=b.dataset.f}setForm(b.dataset.f)});
 function setStep(s){STEP=s;document.querySelectorAll('#stepSeg button').forEach(b=>b.classList.toggle('on',+b.dataset.s===s));syncInputs()}
 document.querySelectorAll('#stepSeg button').forEach(b=>b.onclick=()=>setStep(+b.dataset.s));
-function syncOptUI(){$('#oGhost').checked=O.ghost;$('#oTrail').checked=O.trail;$('#oPos').checked=O.pos;$('#oK').checked=O.k;$('#oDom').checked=O.dom;$('#kBox').style.display=O.k?'':'none';$('#domBox').style.display=O.dom?'':'none';$('#kNum').value=O.kv;$('#kRng').value=O.kv;$('#dtNum').value=O.dt;$('#dtRng').value=O.dt;$('#dwNum').value=O.dw;$('#dwRng').value=O.dw}
+function syncOptUI(){$('#oBase').checked=O.base;$('#oGhost').checked=O.ghost;$('#oTrail').checked=O.trail;$('#oPos').checked=O.pos;$('#oK').checked=O.k;$('#oDom').checked=O.dom;$('#kBox').style.display=O.k?'':'none';$('#domBox').style.display=O.dom?'':'none';$('#kNum').value=O.kv;$('#kRng').value=O.kv;$('#dtNum').value=O.dt;$('#dtRng').value=O.dt;$('#dwNum').value=O.dw;$('#dwRng').value=O.dw}
 /* ---------------- predict mode ---------------- */
-const PRED=[
- {q:'$y=x^2$ で $p$ を $0$ から $3$ に変えると，頂点はどこへ移動するか。',i:['v',[1,0,0]],t:['v',[1,3,0]],kind:'tap'},
- {q:'$y=(x-1)^2+2$ で $q$ を $2$ から $-3$ に変えると，頂点はどこへ移動するか。',i:['v',[1,1,2]],t:['v',[1,1,-3]],kind:'tap'},
- {q:'$y=x^2+bx$ で $b$ を $0$ から $-4$ に変えると，頂点はどこへ移動するか。',i:['g',[1,0,0]],t:['g',[1,-4,0]],kind:'tap'},
- {q:'$y=x^2+bx$ で $b$ を $2$ から $-2$ に変えると，頂点はどこへ移動するか。',i:['g',[1,2,0]],t:['g',[1,-2,0]],kind:'tap'},
- {q:'$y=x^2-2x+c$ で $c$ を $1$ から $-3$ に変えると，頂点はどこへ移動するか。',i:['g',[1,-2,1]],t:['g',[1,-2,-3]],kind:'tap'},
- {q:'$y=ax^2-4x+3$ で $a$ を $1$ から $2$ に変えると，頂点はどこへ移動するか。',i:['g',[1,-4,3]],t:['g',[2,-4,3]],kind:'tap'},
- {q:'$y=-x^2+bx+3$ で $b$ を $2$ から $-2$ に変えると，頂点はどこへ移動するか。',i:['g',[-1,2,3]],t:['g',[-1,-2,3]],kind:'tap'},
- {q:'$y=ax^2+4x$ で $a$ を $2$ から $-2$ に変えると，頂点はどこへ移動するか。',i:['g',[2,4,0]],t:['g',[-2,4,0]],kind:'tap'},
- {q:'$y=a(x-1)^2$ で $a$ を $2$ から $-2$ に変えると，頂点はどこへ移動するか。',i:['v',[2,1,0]],t:['v',[-2,1,0]],kind:'tap'},
- {q:'3点 A$(-1,0)$，B$(1,0)$，C$(0,-1)$ を通る放物線で，C を $(0,2)$ に動かすと，頂点はどこへ移動するか。',i:['t',[-1,0,1,0,0,-1]],t:['t',[-1,0,1,0,0,2]],kind:'tap'},
- {q:'$y=x^2+bx+1$ で $b$ を $-4$ から $4$ まで少しずつ動かすと，頂点はどんな線をえがくか。',i:['g',[1,-4,1]],t:['g',[1,4,1]],kind:'choice',trail:true,ch:['$x$ 軸に平行な直線','傾きのある直線','上に凸の放物線','下に凸の放物線'],ans:2},
- {q:'$y=ax^2+2x+1$ で $a$ を $0.5$ から $4$ まで少しずつ動かすと，頂点はどんな線をえがくか。',i:['g',[0.5,2,1]],t:['g',[4,2,1]],kind:'choice',trail:true,ch:['$x$ 軸に平行な直線','傾きのある直線','上に凸の放物線','下に凸の放物線'],ans:1},
- {q:'$f(x)=(x+2)^2-1$ から $a,\\ p,\\ q$ のうち1つだけを変えて，不等式 $f(x)>0$ の解をすべての実数にしたい。変える文字はどれか。',i:['v',[1,-2,-1]],t:['v',[1,-2,1]],kind:'choice',pos:true,ch:['$a$ だけ','$p$ だけ','$q$ だけ','どれを変えてもできない'],ans:2},
- {q:'$y=x^2-4x+c$ で $c$ を $0$ から大きくしていく。グラフが $x$ 軸と接するのは $c$ がいくつのときか。',i:['g',[1,-4,0]],t:['g',[1,-4,4]],kind:'choice',ch:['$2$','$3$','$4$','$5$'],ans:2},
- {q:'$y=a(x-1)^2+4$ で $a$ を $-1$ から $-3$ に変えるとき，変わらないものはどれか。',i:['v',[-1,1,4]],t:['v',[-3,1,4]],kind:'choice',ch:['頂点の位置','$y$ 切片','$x$ 軸との共有点','グラフの開き具合'],ans:0},
+const PREDQ=[
+ {q:'$y=a(x-p)^2+q$ で，$a=1$，$q=0$ のまま，$p$ だけを $0$ から $3$ に変える。頂点はどこへ移動するか。',i:['v',[1,0,0]],t:['v',[1,3,0]],kind:'tap'},
+ {q:'$y=a(x-p)^2+q$ で，$a=1$，$p=1$ のまま，$q$ だけを $2$ から $-3$ に変える。頂点はどこへ移動するか。',i:['v',[1,1,2]],t:['v',[1,1,-3]],kind:'tap'},
+ {q:'$y=ax^2+bx+c$ で，$a=1$，$c=0$ のまま，$b$ だけを $0$ から $-4$ に変える。頂点はどこへ移動するか。',i:['g',[1,0,0]],t:['g',[1,-4,0]],kind:'tap'},
+ {q:'$y=ax^2+bx+c$ で，$a=1$，$c=0$ のまま，$b$ だけを $2$ から $-2$ に変える。頂点はどこへ移動するか。',i:['g',[1,2,0]],t:['g',[1,-2,0]],kind:'tap'},
+ {q:'$y=ax^2+bx+c$ で，$a=1$，$b=-2$ のまま，$c$ だけを $1$ から $-3$ に変える。頂点はどこへ移動するか。',i:['g',[1,-2,1]],t:['g',[1,-2,-3]],kind:'tap'},
+ {q:'$y=ax^2+bx+c$ で，$b=-4$，$c=3$ のまま，$a$ だけを $1$ から $2$ に変える。頂点はどこへ移動するか。',i:['g',[1,-4,3]],t:['g',[2,-4,3]],kind:'tap'},
+ {q:'$y=ax^2+bx+c$ で，$a=-1$，$c=3$ のまま，$b$ だけを $2$ から $-2$ に変える。頂点はどこへ移動するか。',i:['g',[-1,2,3]],t:['g',[-1,-2,3]],kind:'tap'},
+ {q:'$y=ax^2+bx+c$ で，$b=4$，$c=0$ のまま，$a$ だけを $2$ から $-2$ に変える。頂点はどこへ移動するか。',i:['g',[2,4,0]],t:['g',[-2,4,0]],kind:'tap'},
+ {q:'$y=a(x-p)^2+q$ で，$p=1$，$q=0$ のまま，$a$ だけを $2$ から $-2$ に変える。頂点はどこへ移動するか。',i:['v',[2,1,0]],t:['v',[-2,1,0]],kind:'tap'},
+ {q:'3点 A，B，C を通る放物線で，A$(-1,\\ 0)$，B$(1,\\ 0)$ はそのままにして，C だけを $(0,\\ -1)$ から $(0,\\ 2)$ に動かす。頂点はどこへ移動するか。',i:['t',[-1,0,1,0,0,-1]],t:['t',[-1,0,1,0,0,2]],kind:'tap'},
+ {q:'$y=ax^2+bx+c$ で，$a=1$，$c=1$ のまま，$b$ だけを $-4$ から $4$ まで少しずつ動かす。頂点はどんな線をえがくか。',i:['g',[1,-4,1]],t:['g',[1,4,1]],kind:'choice',trail:true,ch:['$x$ 軸に平行な直線','傾きのある直線','上に凸の放物線','下に凸の放物線'],ans:2},
+ {q:'$y=ax^2+bx+c$ で，$b=2$，$c=1$ のまま，$a$ だけを $0.5$ から $4$ まで少しずつ動かす。頂点はどんな線をえがくか。',i:['g',[0.5,2,1]],t:['g',[4,2,1]],kind:'choice',trail:true,ch:['$x$ 軸に平行な直線','傾きのある直線','上に凸の放物線','下に凸の放物線'],ans:1},
+ {q:'$f(x)=a(x-p)^2+q$ で，いまは $a=1$，$p=-2$，$q=-1$ である。$a$，$p$，$q$ のうち1つだけを変えて，不等式 $f(x)>0$ の解をすべての実数にしたい。変える文字はどれか。',i:['v',[1,-2,-1]],t:['v',[1,-2,1]],kind:'choice',pos:true,ch:['$a$ だけ','$p$ だけ','$q$ だけ','どれを変えてもできない'],ans:2},
+ {q:'$y=ax^2+bx+c$ で，$a=1$，$b=-4$ のまま，$c$ だけを $0$ から大きくしていく。グラフが $x$ 軸と接するのは $c$ がいくつのときか。',i:['g',[1,-4,0]],t:['g',[1,-4,4]],kind:'choice',ch:['$2$','$3$','$4$','$5$'],ans:2},
+ {q:'$y=a(x-p)^2+q$ で，$p=1$，$q=4$ のまま，$a$ だけを $-1$ から $-3$ に変える。変わらないものはどれか。',i:['v',[-1,1,4]],t:['v',[-3,1,4]],kind:'choice',ch:['頂点の位置','$y$ 切片','$x$ 軸との共有点','グラフの開き具合'],ans:0},
 ];
+const SG='$y=a\\sin b(x-p)+q$';
+const PREDT=[
+ {q:SG+' で，$a=1$，$b=1$，$q=0$ のまま，$p$ だけを $0$ から $\\dfrac{\\pi}{3}$ に変える。$x>0$ で最初に最大となる点（山の頂上）はどこへ移動するか。',i:['s',[1,1,0,0]],t:['s',[1,1,1/3,0]],kind:'tap'},
+ {q:SG+' で，$a=1$，$b=1$，$p=0$ のまま，$q$ だけを $0$ から $1$ に変える。$x>0$ で最初の山の頂上はどこへ移動するか。',i:['s',[1,1,0,0]],t:['s',[1,1,0,1]],kind:'tap'},
+ {q:SG+' で，$b=1$，$p=0$，$q=0$ のまま，$a$ だけを $1$ から $2$ に変える。$x>0$ で最初の山の頂上はどこへ移動するか。',i:['s',[1,1,0,0]],t:['s',[2,1,0,0]],kind:'tap'},
+ {q:SG+' で，$a=1$，$p=0$，$q=0$ のまま，$b$ だけを $1$ から $2$ に変える。$x>0$ で最初の山の頂上はどこへ移動するか。',i:['s',[1,1,0,0]],t:['s',[1,2,0,0]],kind:'tap'},
+ {q:SG+' で，$b=1$，$p=0$，$q=0$ のまま，$a$ だけを $1$ から $-1$ に変える。$x>0$ で最初の山の頂上はどこになるか。',i:['s',[1,1,0,0]],t:['s',[-1,1,0,0]],kind:'tap'},
+ {q:'$y=a\\sin(bx+c)+q$ で，$a=1$，$b=2$，$q=0$ のまま，$c$ だけを $0$ から $-\\dfrac{\\pi}{3}$ に変える。$x>0$ で最初の山の頂上はどこへ移動するか。',i:['e',[1,2,0,0]],t:['e',[1,2,-1/3,0]],kind:'tap'},
+ {q:'$y=a\\sin(bx+c)+q$ で，$a=1$，$c=-\\dfrac{\\pi}{2}$，$q=0$ のまま，$b$ だけを $1$ から $2$ に変える。$x>0$ で最初の山の頂上はどこへ移動するか。',i:['e',[1,1,-1/2,0]],t:['e',[1,2,-1/2,0]],kind:'tap'},
+ {q:'$y=a\\cos b(x-p)+q$ で，$a=1$，$b=1$，$q=0$ のまま，$p$ だけを $0$ から $\\dfrac{\\pi}{4}$ に変える。$x>0$ で最初の山の頂上はどこになるか。',fn:'cos',i:['s',[1,1,0,0]],t:['s',[1,1,1/4,0]],kind:'tap'},
+ {q:SG+' で，$a=1$，$p=0$，$q=0$ のまま，$b$ だけを $1$ から $3$ に変える。周期はいくつになるか。',i:['s',[1,1,0,0]],t:['s',[1,3,0,0]],kind:'choice',ch:['$2\\pi$','$\\dfrac{2\\pi}{3}$','$6\\pi$','$\\dfrac{\\pi}{3}$'],ans:1},
+ {q:'$y=a\\sin(bx+c)+q$ で，$a=1$，$b=1$，$q=0$ のまま，$c$ だけを $0$ から $\\dfrac{\\pi}{2}$ に変える。できたグラフと同じものはどれか。',i:['e',[1,1,0,0]],t:['e',[1,1,1/2,0]],kind:'choice',base:true,ch:['$y=\\cos x$','$y=-\\cos x$','$y=-\\sin x$','$y=\\sin x$'],ans:0},
+ {q:'$y=\\sin 2x$ のグラフを $x$ 軸方向に $\\dfrac{\\pi}{6}$ だけ平行移動したグラフの式はどれか。（$y=a\\sin(bx+c)+q$ で $c$ を動かして確かめる）',i:['e',[1,2,0,0]],t:['e',[1,2,-1/3,0]],kind:'choice',ch:['$y=\\sin\\left(2x-\\dfrac{\\pi}{6}\\right)$','$y=\\sin\\left(2x-\\dfrac{\\pi}{3}\\right)$','$y=\\sin\\left(2x+\\dfrac{\\pi}{3}\\right)$','$y=\\sin\\left(2x+\\dfrac{\\pi}{6}\\right)$'],ans:1},
+ {q:SG+' で，いまは $a=1$，$b=1$，$p=0$，$q=0$ である。1つだけ値を変えて，最大値と最小値の差を $4$ にしたい。変える文字はどれか。',i:['s',[1,1,0,0]],t:['s',[2,1,0,0]],kind:'choice',ch:['$a$ だけ','$b$ だけ','$p$ だけ','$q$ だけ'],ans:0},
+];
+let PRED=PREDQ;
 function loadVals(form,arr){const o={};KEYS[form].forEach((k,i)=>o[k]=arr[i]);P[form]=o;P.form=form}
+function homeView(){if(isTrig()){G.cx=PI;G.cy=0;G.sc=46}else{G.cx=0;G.cy=0;G.sc=36}}
 function startPred(i){
   pred={i,mark:null,choice:null,done:false,correct:null};const pr=PRED[i];
-  loadVals(pr.i[0],pr.i[1]);ghost=null;trail=[];O.trail=!!pr.trail;O.pos=!!pr.pos;O.k=false;O.dom=false;syncOptUI();
-  lock={};buildParams();G.cx=0;G.cy=0;G.sc=36;afterChange();renderPred();
+  if(isTrig())P.fn=pr.fn||'sin';
+  loadVals(pr.i[0],pr.i[1]);ghost=null;trail=[];O.trail=!!pr.trail;O.pos=!!pr.pos;O.base=!!pr.base;O.k=false;O.dom=false;syncOptUI();
+  lock={};buildParams();homeView();afterChange();renderPred();
 }
 function renderPred(){
   const pr=PRED[pred.i],c=$('#modeCard');
-  let h=`<h3>予想 ${pred.i+1} / ${PRED.length}</h3><div class="qtext">${T(pr.q)}</div>`;
-  if(pr.kind==='tap')h+=`<div class="mini" style="margin-top:6px">${pred.done?'':'グラフの上をタップして，予想した頂点の位置に印をつけよう。'}</div>`;
+  let h=`<h3>予想 ${pred.i+1} / ${PRED.length}</h3><div class="qtext">${T(pr.q)}</div><div class="cureq" id="curEq">${curEqHTML()}</div>`;
+  if(pr.kind==='tap')h+=`<div class="mini" style="margin-top:6px">${pred.done?'':'グラフの上をタップして，予想した'+(isTrig()?'山の頂上':'頂点')+'の位置に印をつけよう。'}</div>`;
   else{h+='<div class="choices">'+pr.ch.map((s,j)=>{let cl='';if(pred.done){if(j===pr.ans)cl='right';else if(j===pred.choice)cl='wrong'}else if(j===pred.choice)cl='sel';return `<button data-j="${j}" class="${cl}">${CIR[j]}　${T(s)}</button>`}).join('')+'</div>'}
   if(pred.fb)h+=`<div class="fb ${pred.ok?'ok':'ng'}">${pred.fb}</div>`;
   h+=`<div class="row2"><button class="btn" id="pPrev" ${pred.i===0?'disabled':''}>前へ</button>`+(pred.done?`<button class="btn" id="pRe">もう一度</button>`:`<button class="btn pri" id="pChk">答え合わせ</button>`)+`<button class="btn" id="pNext" ${pred.i===PRED.length-1?'disabled':''}>次へ</button></div>`;
@@ -515,25 +686,37 @@ function checkPred(){
   const co=coef();ghost=co.err?null:co;pred.fb='';renderPred();
   animateTo(pr.t[0],pr.t[1],1300,()=>{
     pred.done=true;
-    if(pr.kind==='tap'){const v=vertexOf(coefOf(pr.t[0],P[pr.t[0]]));pred.correct=v;const d=Math.hypot(v.x-pred.mark.x,v.y-pred.mark.y);pred.ok=d<0.6;pred.fb=(pred.ok?'ほぼ正解。':'ずれがあります。')+`正しい頂点は (${fxm(v.x)}, ${fxm(v.y)})，予想とのずれは ${fx(Math.round(d*10)/10)} です。`}
+    if(pr.kind==='tap'){const co2=coefOf(pr.t[0],P[pr.t[0]]);const v=isTrig()?firstMax(co2):vertexOf(co2);pred.correct=v;const d=Math.hypot(v.x-pred.mark.x,v.y-pred.mark.y);pred.ok=d<(isTrig()?0.3:0.6);pred.fb=(pred.ok?'ほぼ正解。':'ずれがあります。')+(isTrig()?`正しい山の頂上は (${piTxt(v.x/PI)}, ${fxm(v.y)})`:`正しい頂点は (${fxm(v.x)}, ${fxm(v.y)})`)+`，予想とのずれは ${fx(Math.round(d*10)/10)} です。`}
     else{pred.ok=pred.choice===pr.ans;pred.fb=pred.ok?'正解。':'正解は '+CIR[pr.ans]+' です。'}
     syncInputs();draw();renderPred();
   });
 }
 /* ---------------- mission mode ---------------- */
 function newMission(){
-  const As=[0.5,1,2,-0.5,-1,-2,1,-1];const a=As[Math.floor(Math.random()*As.length)];const p=Math.floor(Math.random()*9)-4,q=Math.floor(Math.random()*9)-4;
-  const form=mis?mis.form:'g';mis={form,target:{a,b:-2*a*p,c:a*p*p+q},fb:'',ok:false,score:mis?mis.score:0,tries:mis?mis.tries:0,hint:false};
-  P.v={a:1,p:0,q:0};P.g={a:1,b:0,c:0};P.t={ax:-1,ay:1,bx:0,by:0,cx:1,cy:1};P.form=form;ghost=null;trail=[];lock={};buildParams();G.cx=0;G.cy=0;G.sc=32;afterChange();renderMis();
+  const rp=a=>a[Math.floor(Math.random()*a.length)];let target,form;
+  const keep=mis&&mis.fnKey===FN;
+  if(isTrig()){
+    const b=rp([1,2,3,0.5,1,2]);const pr=b===0.5?rp([-1/3,-1/6,0,1/6,1/3,1/2]):rp([-1/2,-1/3,-1/4,-1/6,0,1/6,1/4,1/3,1/2,2/3]);
+    target=trigOf('sin',rp([1,2,-1,-2,1.5]),b,pr,rp([-1,0,1,0]));form=keep?mis.form:'s';
+    P.s={ta:1,tb:1,tp:0,tq:0};P.e={ta:1,tb:1,tc:0,tq:0};
+  }else{
+    const a=rp([0.5,1,2,-0.5,-1,-2,1,-1]);const p=Math.floor(Math.random()*9)-4,q=Math.floor(Math.random()*9)-4;
+    target={a,b:-2*a*p,c:a*p*p+q};form=keep?mis.form:'g';
+    P.v={a:1,p:0,q:0};P.g={a:1,b:0,c:0};P.t={ax:-1,ay:1,bx:0,by:0,cx:1,cy:1};
+  }
+  mis={fnKey:FN,form,target,fb:'',ok:false,score:keep?mis.score:0,tries:keep?mis.tries:0,hint:false};
+  P.form=form;ghost=null;trail=[];lock={};buildParams();homeView();afterChange();renderMis();
 }
+function sameCurve(a,b){const L=isTrig()?-2*PI:-6,R=isTrig()?2*PI:6;for(let i=0;i<=200;i++){const x=L+(R-L)*i/200;if(Math.abs(fval(a,x)-fval(b,x))>0.02)return false}return true}
 function renderMis(){
-  const fn={v:'$a(x-p)^2+q$（標準形）',g:'$ax^2+bx+c$（一般形）',t:'3点を通る'}[mis.form];
-  let h=`<h3>ミッション</h3><div class="qtext">点線のグラフにぴったり重ねよう。<br>使う式の形：${T(fn)}</div><div class="mini">式の形は下のボタンで変えられます。</div>`;
-  if(mis.hint){const v=vertexOf(mis.target);h+=`<div class="mini" style="margin-top:6px">ヒント：目標の頂点は (${fxm(v.x)}, ${fxm(v.y)})，${mis.target.a>0?'下に凸':'上に凸'}，$a$ の値は ${fxm(mis.target.a)}</div>`.replace(/\$a\$/,K('a'))}
+  const fn={v:'$a(x-p)^2+q$（標準形）',g:'$ax^2+bx+c$（一般形）',t:'3点を通る',s:'$a\\sin b(x-p)+q$',e:'$a\\sin(bx+c)+q$'}[mis.form];
+  let h=`<h3>ミッション</h3><div class="qtext">点線のグラフにぴったり重ねよう。<br>使う式の形：${T(fn)}</div><div class="cureq" id="curEq">${curEqHTML()}</div><div class="mini">式の形は下のボタンで変えられます。</div>`;
+  if(mis.hint&&isTrig()){const t=mis.target,fm=firstMax(t);h+=`<div class="mini" style="margin-top:6px">ヒント：振幅 ${fx(Math.abs(t.a))}，周期 ${piTxt(2/Math.abs(t.b))}，最大値 ${fxm(t.q+Math.abs(t.a))}，${'x>0 で最初の山の頂上は x = '+piTxt(fm.x/PI)}</div>`}
+  else if(mis.hint){const v=vertexOf(mis.target);h+=`<div class="mini" style="margin-top:6px">ヒント：目標の頂点は (${fxm(v.x)}, ${fxm(v.y)})，${mis.target.a>0?'下に凸':'上に凸'}，$a$ の値は ${fxm(mis.target.a)}</div>`.replace(/\$a\$/,K('a'))}
   if(mis.fb)h+=`<div class="fb ${mis.ok?'ok':'ng'}">${mis.fb}</div>`;
   h+=`<div class="row2"><button class="btn pri" id="mChk">判定</button><button class="btn" id="mHint">ヒント</button><button class="btn" id="mNew">次のミッション</button></div><div class="mini" style="margin-top:6px">成功 ${mis.score} 回 / 判定 ${mis.tries} 回</div>`;
   $('#modeCard').innerHTML=h;
-  $('#mChk').onclick=()=>{const co=coef();mis.tries++;if(co.err){mis.ok=false;mis.fb='エラーでグラフが表示されていません。'}else{const t=mis.target;const ok=Math.abs(co.a-t.a)<0.02&&Math.abs(co.b-t.b)<0.02&&Math.abs(co.c-t.c)<0.02;mis.ok=ok;if(ok){mis.score++;mis.fb='ぴったり一致しました。'}else{const v=vertexOf(co),w=vertexOf(t);const msg=[];if(!v||Math.hypot(v.x-w.x,v.y-w.y)>0.02)msg.push('頂点の位置');if(Math.abs(co.a-t.a)>=0.02)msg.push('開き具合（a）');mis.fb='まだ違います：'+msg.join('と')+'がずれています。'}}renderMis()};
+  $('#mChk').onclick=()=>{const co=coef();mis.tries++;if(co.err){mis.ok=false;mis.fb='エラーでグラフが表示されていません。'}else{const t=mis.target;const ok=sameCurve(co,t);mis.ok=ok;if(ok){mis.score++;mis.fb='ぴったり一致しました。'}else if(isTrig()){const msg=[];if(Math.abs(Math.abs(co.a)-Math.abs(t.a))>0.02)msg.push('振幅');if(Math.abs(Math.abs(co.b)-Math.abs(t.b))>0.02)msg.push('周期');if(Math.abs(co.q-t.q)>0.02)msg.push('上下の位置');if(!msg.length)msg.push('左右の位置（または向き）');mis.fb='まだ違います：'+msg.join('，')+'がずれています。'}else{const v=vertexOf(co),w=vertexOf(t);const msg=[];if(!v||Math.hypot(v.x-w.x,v.y-w.y)>0.02)msg.push('頂点の位置');if(Math.abs(co.a-t.a)>=0.02)msg.push('開き具合（a）');mis.fb='まだ違います：'+msg.join('と')+'がずれています。'}}renderMis()};
   $('#mHint').onclick=()=>{mis.hint=true;renderMis()};$('#mNew').onclick=newMission;
 }
 /* ---------------- mode switching ---------------- */
@@ -541,7 +724,7 @@ function setMode(m){
   animId++;mode=m;document.querySelectorAll('#modeTabs .tab').forEach(b=>b.classList.toggle('on',b.dataset.m===m));
   $('#appView').style.display=m==='ex'?'none':'';$('#exView').style.display=m==='ex'?'':'none';
   $('#modeCard').style.display=(m==='pred'||m==='mis')?'':'none';
-  $('#ghint').textContent=m==='pred'?'答え合わせの前は係数を動かせません':'ドラッグで移動，ホイールやボタンで拡大・縮小';
+  $('#ghint').textContent=m==='pred'?'答え合わせの前は係数を動かせません':(isTrig()?'青い基準点をドラッグ：左右・上下に動く／オレンジの点をドラッグ：振幅と周期が変わる／何もない所をドラッグ：画面が動く':'頂点をドラッグ：位置が動く（2つの値が同時に変わる）／線をドラッグ：開き具合 a が変わる／何もない所をドラッグ：画面が動く');
   if(m==='pred')startPred(pred?pred.i:0);
   else if(m==='mis')newMission();
   else if(m==='ex'){if(!EX.cur)newEx()}
@@ -549,6 +732,23 @@ function setMode(m){
   if(m!=='ex')requestAnimationFrame(resize);
 }
 document.querySelectorAll('#modeTabs .tab').forEach(b=>b.onclick=()=>setMode(b.dataset.m));
+const TYPES={quad:['型1 操作で起こり得るか','型2 3点の入力と方程式の解','型3 エラーになる入力','型4 係数の符号とグラフ','型5 頂点の動き（会話文）','型6 ○×の組合せ'],
+  trig:['型1 グラフから式を読みとる','型2 変換の順序（会話文）','型3 式からグラフを選ぶ','型4 方程式の解の個数と最大値','型5 ○×の組合せ']};
+function setFn(fn,keepMode){
+  FN=fn;document.querySelectorAll('#fnTabs .tab[data-fn]').forEach(b=>b.classList.toggle('on',b.dataset.fn===fn));
+  PRED=isTrig()?PREDT:PREDQ;pred=null;
+  P.form=isTrig()?'s':'v';buildFormSeg();
+  $('#oTrailL').textContent=isTrig()?'基準点の跡':'頂点の跡';$('#oPosL').style.display=isTrig()?'none':'';$('#oBaseL').style.display=isTrig()?'':'none';
+  $('#dtL').textContent=isTrig()?'左端（×π）':'左端 t';$('#dwL').textContent=isTrig()?'幅（×π）':'幅';
+  if(isTrig()){O.dt=0;O.dw=2;O.pos=false;if(STEP===0.1)setStep(0.5)}else{O.dt=-1;O.dw=3;O.base=false}
+  ghost=null;trail=[];stateX=null;$('#backX').disabled=true;$('#xlog').textContent='状態Xを記録すると，そこから何を変えたかがここに出ます。';lock={};
+  $('#exType').innerHTML=TYPES[fn].map((s,i)=>`<option value="${i+1}">${s}</option>`).join('');
+  if(EX.cur&&EX.cur.fnKey!==fn)EX.cur=null;showBatch();
+  syncOptUI();homeView();buildParams();
+  if(!keepMode)setMode(mode==='ex'?'ex':mode);
+}
+document.querySelectorAll('#fnTabs .tab[data-fn]').forEach(b=>b.onclick=()=>setFn(b.dataset.fn));
+document.querySelectorAll('#fnSeg button').forEach(b=>b.onclick=()=>{if(mode==='pred'&&pred&&!pred.done)return;markGhost();P.fn=b.dataset.tf;buildParams();afterChange()});
 /* =================================================================
    Worksheet generation
 ================================================================= */
@@ -618,7 +818,12 @@ function graphSVG(o){
   const ox=sx(0),oy=sy(0);
   s+=`<line x1="0" y1="${oy}" x2="${w}" y2="${oy}" class="ax"/><path d="M${w} ${oy} l-6 -3 v6z"/><line x1="${ox}" y1="${h}" x2="${ox}" y2="0" class="ax"/><path d="M${ox} 0 l-3 6 h6z"/>`;
   s+=`<text x="${w-2}" y="${oy+13}" text-anchor="end">x</text><text x="${ox+5}" y="10">y</text><text x="${ox-11}" y="${oy+13}">O</text>`;
-  for(const cu of (o.curves||[])){const[a,b,c]=cu.co;let d='';const N=160;for(let i=0;i<=N;i++){const x=x0+(x1-x0)*i/N,y=a*x*x+b*x+c;const Y=Math.max(-50,Math.min(h+50,sy(y)));d+=(i?'L':'M')+sx(x).toFixed(1)+' '+Y.toFixed(1)}s+=`<path d="${d}" class="${cu.cls||'cv'}" clip-path="url(#${id})"/>`}
+  for(const y of (o.hl||[]))s+=`<line x1="0" y1="${sy(y)}" x2="${w}" y2="${sy(y)}" class="gd"/>`;
+  for(const x of (o.vl||[]))s+=`<line x1="${sx(x)}" y1="0" x2="${sx(x)}" y2="${h}" class="gd"/>`;
+  for(const x of (o.xtick||[]))s+=`<line x1="${sx(x)}" y1="${oy-2.5}" x2="${sx(x)}" y2="${oy+2.5}" class="ax"/>`;
+  for(const t of (o.xt||[]))s+=`<line x1="${sx(t.x)}" y1="${oy-3.5}" x2="${sx(t.x)}" y2="${oy+3.5}" class="ax"/><text class="tk" x="${sx(t.x)}" y="${oy+(t.up?-6:13)}" text-anchor="middle">${t.lab}</text>`;
+  for(const t of (o.yt||[]))s+=`<text class="tk" x="${ox-4}" y="${sy(t.y)+4}" text-anchor="end">${t.lab}</text>`;
+  for(const cu of (o.curves||[])){const[a,b,c]=cu.co||[0,0,0];let d='';const N=cu.f?400:160;for(let i=0;i<=N;i++){const x=x0+(x1-x0)*i/N,y=cu.f?cu.f(x):a*x*x+b*x+c;const Y=Math.max(-50,Math.min(h+50,sy(y)));d+=(i?'L':'M')+sx(x).toFixed(1)+' '+Y.toFixed(1)}s+=`<path d="${d}" class="${cu.cls||'cv'}" clip-path="url(#${id})"/>`}
   for(const L of (o.lines||[])){s+=`<line x1="${sx(L[0])}" y1="${sy(L[1])}" x2="${sx(L[2])}" y2="${sy(L[3])}" class="cvd" clip-path="url(#${id})"/>`}
   for(const p of (o.pts||[])){s+=`<circle cx="${sx(p.x)}" cy="${sy(p.y)}" r="2.6"/>`;if(p.lab)s+=`<text class="up" x="${sx(p.x)+(p.dx||4)}" y="${sy(p.y)+(p.dy||-4)}">${p.lab}</text>`}
   return s+'</svg>';
@@ -823,18 +1028,163 @@ function g5(R,B){
   const sol=`<h4>(1)</h4><p>${T(`$y=a\\left(x+\\dfrac{${b}}{2a}\\right)^2-\\dfrac{${b*b}}{4a}+${c}$ より，頂点は $\\left(\\dfrac{${-b/2}}{a},\\ \\dfrac{${-b*b/4}}{a}+${c}\\right)$`)}</p><h4>(2)</h4><p>${T(`$X=\\dfrac{${-b/2}}{a}$ より $\\dfrac{1}{a}=\\dfrac{X}{${-b/2}}$。$Y=${-b*b/4}\\cdot\\dfrac{X}{${-b/2}}+${c}=${b/2}X+${c}$。また $X=\\dfrac{${-b/2}}{a}\\neq0$ なので，点 $(0,\\ ${c})$ は頂点にならない。`)}</p><h4>(3)</h4><p>${T(`$a$ が $1$ から増えると $X=\\dfrac{${-b/2}}{a}$ は $0$ に近づく（${v1.x>v0.x?'右へ':'左へ'}）。直線の傾きは $${b/2}$ なので，${CIR[di]}`)}</p>`;
   return{title:'頂点の動き（会話文）',body:H,subs:[{q:1,check:st('g',[1,b,c],'o=gt')},{q:2,check:st('g',[1,b,c],'o=gt')},{q:3,check:st('g',[1,b,c],'o=gt')}],sol,meta:{sc,b,c,ans:[-b/2,-b*b/4,c,b/2,c,0,c,di]}};
 }
+/* ================= trig worksheets ================= */
+const fT=(fn,A,B,C,Q=0)=>x=>A*TF(fn,B*x+C*PI)+Q;/* C in pi units */
+function normC(c){c=((c%2)+2)%2;if(c>1+1e-9)c-=2;return rnd(c,1e9)}
+function eqFn(f,g){for(let i=0;i<=400;i++){const x=-7+14*i/400;if(Math.abs(f(x)-g(x))>1e-6)return false}return true}
+function trigExprTex(fn,A,B,C,Q=0){const arg=Math.abs(C)<1e-9?' '+(Math.abs(B-1)<1e-9?'':fx(B))+'x':'\\left('+argTex(B,C)+'\\right)';let s=coefTex(A)+'\\'+fn+arg;if(Math.abs(Q)>1e-9)s+=(Q>0?'+':'-')+fx(Math.abs(Q));return s}
+function piLabels(l,r,step){const out=[];for(let k=Math.ceil(l/step-1e-9);k*step<=r+1e-9;k++){const x=k*step;if(Math.abs(x)<1e-9)continue;out.push({x:x*PI,lab:piTxt(x)})}return out}
+function piTicks(l,r,step){const out=[];for(let k=Math.ceil(l/step-1e-9);k*step<=r+1e-9;k++)out.push(k*step*PI);return out}
+const stS=(f,arr,o)=>st(f,arr,o)+'&fn=sin';
+/* S1: read the formula from the graph */
+function s1(R,B){
+  for(let tries=0;tries<500;tries++){
+    const a=pick(R,[1,2,3]),b=pick(R,[1,2,3]),p=pick(R,[1/12,1/6,1/4,1/3,1/2,2/3,-1/6,-1/4,-1/3]);
+    const c=normC(-b*p),tgt=fT('sin',a,b,c);
+    const Kc=[['sin',a,b,c],['cos',a,b,normC(c-0.5)],['sin',-a,b,normC(c+1)],['cos',-a,b,normC(c+0.5)]];
+    const Dc=[['sin',a,b,normC(-p)],['sin',a,b,normC(-c)],['cos',a,b,c],['sin',-a,b,c],['cos',a,b,normC(c+0.5)],['sin',a,b,normC(c+0.5)],['cos',-a,b,normC(c-0.5)],['sin',a,b,normC(c-0.5)]];
+    const ok=shuffle(R,Kc).slice(0,2);const disp=e=>trigExprTex(...e);
+    const seen=new Set(ok.map(disp));const ds=[];
+    for(const e of shuffle(R,Dc)){const d=disp(e);if(seen.has(d)||eqFn(fT(...e),tgt))continue;seen.add(d);ds.push(e);if(ds.length===4)break}
+    if(ds.length<4)continue;
+    const opts=shuffle(R,[...ok,...ds]);const corr=opts.map((e,i)=>eqFn(fT(...e),tgt)?i:-1).filter(i=>i>=0);if(corr.length!==2)continue;
+    const Tp=2/b;let x0=p-Math.floor(p/Tp+1e-9)*Tp;if(x0>Tp-1e-9)x0-=Tp;
+    const marks=x0<1e-9?[x0+Tp/4,x0+Tp/2]:[x0,x0+Tp/4];
+    const xr=[Math.min(0,x0)-Tp/4-0.08,Math.max(x0+Tp*1.15,marks[1]+0.3)];
+    const g=graphSVG({w:300,h:170,v:[xr[0]*PI,xr[1]*PI,-a*1.5,a*1.5],curves:[{f:tgt}],xt:marks.map(m=>({x:m*PI,lab:piTxt(m),up:Math.abs(fval(trigOf('sin',a,b,p,0),m*PI))>1e-6?false:true})),yt:[{y:a,lab:String(a)},{y:-a,lab:'−'+a}],hl:[a,-a],vl:[marks[1]*PI],pts:marks.map(m=>({x:m*PI,y:tgt(m*PI)}))});
+    const k1=B.take(corr[0],1),k2=B.take(corr[1],1);B.groups.push([k1,k2]);
+    let H=`<p>${T('関数 $y=f(x)$ のグラフをコンピュータのグラフ表示ソフトを用いて表示させたところ，図1のようになった。ただし，図の破線は，グラフの最大値・最小値と，示した点の位置を表している。')}</p>`;
+    H+=`<div class="figs"><div>${g}<div class="figcap">図1</div></div></div>`;
+    H+=talk([['太郎','山の高さと，となりの山までの間かくを読めば，式がわかりそうだね。'],['花子','でも，同じグラフを表す式は一つとは限らないよ。']]);
+    H+=`<p class="sub">${T('図1のグラフを表す関数の式として正しいものを，次の⓪〜⑤のうちから二つ選べ。ただし，解答の順序は問わない。')}　${BX(k1)}，${BX(k2)}</p>`;
+    H+=optsBox(opts.map(e=>'$y='+disp(e)+'$'));
+    const sol=`<p>${T(`グラフの最大値は $${a}$，最小値は $-${a}$ なので振幅は $${a}$。山から次の山までの間かく（周期）は $${piTex(Tp)}$ なので $\\dfrac{2\\pi}{b}=${piTex(Tp)}$ より $b=${b}$。$x=${piTex(x0)}$ で増加しながら $x$ 軸と交わるので，$y=${a===1?'':a}\\sin ${b===1?'':b}\\left(x-${piTex(x0)}\\right)=${disp(Kc[0])}$ と表せる。`)}</p><p>${T('$\\sin\\theta=\\cos\\left(\\theta-\\dfrac{\\pi}{2}\\right)=-\\sin(\\theta+\\pi)=-\\cos\\left(\\theta+\\dfrac{\\pi}{2}\\right)$ を使うと，同じグラフを表す式がほかにもある。')}</p><p>よって ${CIR[corr[0]]}，${CIR[corr[1]]}（順不同）</p>`;
+    return{title:'グラフから式を読みとる',body:H,subs:[{q:1,check:stS('e',[a,b,c,0],'o=g')}],sol,meta:{a,b,p,c,opts,corr}};
+  }
+  throw new Error('s1 failed');
+}
+/* S2: order of transformations */
+function s2(R,B){
+  for(let tries=0;tries<500;tries++){
+    const Bc=pick(R,[2,3]),A=pick(R,[2,3]),Q=pick(R,[1,-1,2,-2,3]);if(A===Bc)continue;
+    const p=pick(R,[1/12,1/6,1/4,1/3]),C=rnd(Bc*p,1e9);
+    const items=[{k:'B',t:fx(Bc),v:Bc},{k:'iB',t:`\\dfrac{1}{${Bc}}`,v:1/Bc},{k:'A',t:fx(A),v:A},{k:'iA',t:`\\dfrac{1}{${A}}`,v:1/A},{k:'Q',t:fx(Q),v:Q},{k:'nQ',t:fx(-Q),v:-Q},{k:'C',t:piTex(C),v:C*PI},{k:'p',t:piTex(p),v:p*PI},{k:'np',t:piTex(-p),v:-p*PI},{k:'nC',t:piTex(-C),v:-C*PI}];
+    if(new Set(items.map(i=>rnd(i.v,1e6))).size!==items.length)continue;
+    const L=shuffle(R,items);const ix=k=>L.findIndex(i=>i.k===k);
+    const pp=piParts(p);
+    const kn=B.take(pp.n,1),kd=B.take(pp.d,1),k1=B.take(ix('iB'),2),k2=B.take(ix('p'),2),k3=B.take(ix('A'),2),k4=B.take(ix('Q'),2),k5=B.take(ix('C'),3);
+    const tgt=fT('sin',A,Bc,-C,Q);
+    const g=graphSVG({w:300,h:150,v:[-0.25*PI,2.1*PI,-(A+Math.abs(Q))*1.2-0.3,(A+Math.abs(Q))*1.2+0.3],curves:[{f:x=>Math.sin(x),cls:'cv2'},{f:tgt}],xt:piLabels(-0.25,2.1,0.5),xtick:piTicks(-0.25,2.1,1/12)});
+    const ex=trigExprTex('sin',A,Bc,-C,Q);
+    let H=`<p>${T(`関数 $y=${ex}$ のグラフを，$y=\\sin x$ のグラフをもとにしてかくことを考える。図1は，コンピュータのグラフ表示ソフトでこの2つのグラフを表示させたものである（細い線が $y=\\sin x$）。`)}</p>`;
+    H+=`<div class="figs"><div>${g}<div class="figcap">図1</div></div></div>`;
+    H+=`<p class="sub">(1)　${T('この関数の式は')} ${K(`y=${A}\\sin ${Bc}\\left(x-\\dfrac{${BT(kn)}}{${BT(kd)}}\\pi\\right)${Q>0?'+':'-'}${Math.abs(Q)}`)} ${T('と変形できる。')}</p>`;
+    H+=talk([['太郎','$y=\\sin x$ のグラフを，順に縮小・平行移動・拡大していけばかけそうだね。'],['花子','でも，縮小と平行移動の順番を入れかえると，平行移動する量が変わるかもしれないよ。']]);
+    H+=`<p class="sub">(2)　太郎さんは，次の手順で考えた。</p><div class="ops"><div>${T('$y=\\sin x$ のグラフを，$y$ 軸をもとにして $x$ 軸方向に')} ${BX(k1)} 倍に縮小する。</div><div>${T('次に，$x$ 軸方向に')} ${BX(k2)} だけ平行移動する。</div><div>${T('次に，$x$ 軸をもとにして $y$ 軸方向に')} ${BX(k3)} 倍に拡大する。</div><div>${T('最後に，$y$ 軸方向に')} ${BX(k4)} だけ平行移動する。</div></div>`;
+    H+=`<p class="sub">(3)　${T('花子さんは，$y=\\sin x$ のグラフを先に $x$ 軸方向に')} ${BX(k5)} ${T('だけ平行移動してから，$y$ 軸をもとにして $x$ 軸方向に')} ${BX(k1)} 倍に縮小し，そのあとは太郎さんと同じ手順で考えた。</p>`;
+    H+=`<p>${BX(k1)}〜${BX(k5)} に当てはまるものを，次の⓪〜⑨のうちから一つずつ選べ。ただし，同じものを繰り返し選んでもよい。</p>`+optsBox(L.map(i=>'$'+i.t+'$'),'five');
+    const sol=`<h4>(1)</h4><p>${T(`$${Bc}x-${piTex(C)}=${Bc}\\left(x-${piTex(p)}\\right)$ より $${piTex(p)}=\\dfrac{${pp.n}}{${pp.d}}\\pi$`)}</p><h4>(2)</h4><p>${T(`$x$ を $${Bc}x$ にすると $x$ 軸方向に $\\dfrac{1}{${Bc}}$ 倍。$${Bc}\\left(x-${piTex(p)}\\right)$ なので，縮小したあとの平行移動は $${piTex(p)}$。$y$ 軸方向に $${A}$ 倍して，$${Q}$ だけ平行移動する。`)}</p><p>${[k1,k2,k3,k4].map((k,i)=>k+'：'+CIR[[ix('iB'),ix('p'),ix('A'),ix('Q')][i]]).join('　')}</p><h4>(3)</h4><p>${T(`先に平行移動すると $y=\\sin\\left(x-${piTex(C)}\\right)$。これを $x$ 軸方向に $\\dfrac{1}{${Bc}}$ 倍に縮小すると $x$ が $${Bc}x$ に置きかわり $y=\\sin\\left(${Bc}x-${piTex(C)}\\right)$ となる。よって平行移動の量は $${piTex(C)}$。`)}</p><p>${k5}：${CIR[ix('C')]}</p>`;
+    return{title:'変換の順序（会話文）',body:H,subs:[{q:1,check:stS('e',[A,Bc,-C,Q],'o=gb')}],sol,meta:{A,Bc,C,p,Q,L:L.map(i=>({k:i.k,v:i.v})),ans:{n:pp.n,d:pp.d,iB:ix('iB'),p:ix('p'),A:ix('A'),Q:ix('Q'),C:ix('C')}}};
+  }
+  throw new Error('s2 failed');
+}
+/* S3: choose the graph */
+function s3(R,B){
+  for(let tries=0;tries<500;tries++){
+    const A=pick(R,[1,2]),Bc=pick(R,[2,3]),p=pick(R,[1/6,1/4,1/3,1/12,-1/6,-1/4]);const C=rnd(Bc*p,1e9);
+    const tgt=fT('sin',A,Bc,-C);
+    const cands=[tgt,x=>A*Math.sin(Bc*(x-C*PI)),x=>A*Math.sin(Bc*(x+p*PI)),x=>A*Math.sin((x-p*PI)/Bc),x=>-A*Math.sin(Bc*(x-p*PI)),x=>A*Math.cos(Bc*(x-p*PI))];
+    let dup=false;for(let i=0;i<6;i++)for(let j=i+1;j<6;j++)if(eqFn(cands[i],cands[j]))dup=true;if(dup)continue;
+    const order=shuffle(R,[0,1,2,3,4,5]);const ans=order.indexOf(0);
+    const Tp=2/Bc;let xm=p+1/(2*Bc);xm=xm-Math.floor(xm/Tp+1e-9)*Tp;if(xm>Tp-1e-9)xm-=Tp;const pm=piParts(xm);if(!pm||pm.n<1||pm.d<2)continue;
+    const u=Math.abs(p*6-Math.round(p*6))<1e-9?1/6:1/12;
+    const ka=B.take(ans,1),kb=B.take(Bc,2),kn=B.take(pm.n,2),kd=B.take(pm.d,2);
+    const opt=f=>graphSVG({w:170,h:100,v:[-0.3*PI,2.15*PI,-A*1.45,A*1.45],curves:[{f}],xt:[{x:u*PI,lab:piTxt(u)},...piLabels(0.5,2,0.5)],xtick:piTicks(-0.25,2.1,u),yt:[{y:A,lab:String(A)},{y:-A,lab:'−'+A}],hl:[A,-A]});
+    const ex=trigExprTex('sin',A,Bc,-C);
+    let H=`<p>${T(`関数 $f(x)=${ex}$ のグラフをコンピュータのグラフ表示ソフトで表示させる。ただし，次の⓪〜⑤の図の $x$ 軸の目盛りは $${piTex(u)}$ ごとにつけてある。`)}</p>`;
+    H+=`<p class="sub">(1)　${T('$y=f(x)$ のグラフは ')}${BX(ka)} である。${BX(ka)} に当てはまるものを，次の⓪〜⑤のうちから一つ選べ。</p>`;
+    H+='<div class="gopts">'+order.map((oi,i)=>`<div>${opt(cands[oi])}<div>${CIR[i]}</div></div>`).join('')+'</div>';
+    H+=`<p class="sub">(2)　${T('$0\\leqq x<2\\pi$ において，$f(x)$ が最大値をとる $x$ の個数は')} ${BX(kb)} ${T('個であり，そのうち最も小さい $x$ の値は')} ${K(`\\dfrac{${BT(kn)}}{${BT(kd)}}\\pi`)} である。</p>`;
+    const sol=`<h4>(1)</h4><p>${T(`$f(x)=${A===1?'':A}\\sin ${Bc}\\left(x-${piTex(p)}\\right)$ なので，$y=${A===1?'':A}\\sin ${Bc}x$ のグラフを $x$ 軸方向に $${piTex(p)}$ だけ平行移動したもの。周期は $${piTex(Tp)}$，最大値 $${A}$。$${piTex(C)}$ だけずらしたグラフや，向きが逆のグラフとまちがえないようにする。`)}</p><p>よって ${CIR[ans]}</p><h4>(2)</h4><p>${T(`周期が $${piTex(Tp)}$ なので，$0\\leqq x<2\\pi$ に山は $${Bc}$ 個ある。$${Bc}\\left(x-${piTex(p)}\\right)=\\dfrac{\\pi}{2}+2n\\pi$ より，最も小さいものは $x=${piTex(xm)}$。`)}</p>`;
+    return{title:'式からグラフを選ぶ',body:H,subs:[{q:1,check:stS('e',[A,Bc,-C,0],'o=g')},{q:2,check:stS('e',[A,Bc,-C,0],'o=gkd&k='+A+'&dt=0&dw=2')}],sol,meta:{A,Bc,C,p,ans,order,xm}};
+  }
+  throw new Error('s3 failed');
+}
+/* S4: number of solutions with y=k */
+const ASIN={'1':[1/2],'0.5':[1/6,5/6],'0':[0,1],'-0.5':[-1/6,7/6],'-1':[3/2]};
+function cntSol(Bc,C,s,L){const us=new Set();for(const th of ASIN[String(s)]){const base=Math.round(12*(th+C));for(let n=-10;n<=10;n++){const u=base+24*n;if(u>=0&&u<=Math.round(12*L*Bc))us.add(u)}}return us.size}
+function s4(R,B){
+  for(let tries=0;tries<500;tries++){
+    const A=2,Bc=pick(R,[1,2,3]),p=pick(R,[0,1/6,1/4,1/3,1/2,-1/6,-1/3]),Q=pick(R,[0,1,-1]),L=pick(R,[1,1.5,2]);const C=rnd(Bc*p,1e9);
+    if(Math.abs(C*12-Math.round(C*12))>1e-9)continue;
+    const ss=shuffle(R,[0.5,0,-0.5,-1]).slice(0,2);
+    const cm=cntSol(Bc,C,1,L),c1=cntSol(Bc,C,ss[0],L),c2=cntSol(Bc,C,ss[1],L);
+    if(new Set([cm,c1,c2]).size<2||cm===0)continue;
+    const kA=B.take(A+Q,1),kB=B.take(cm,1),kC=B.take(c1,2),kD=B.take(c2,3);
+    const ex=trigExprTex('sin',A,Bc,-C,Q);const k1=Q+A*ss[0],k2=Q+A*ss[1];const dom=`0\\leqq x\\leqq ${piTex(L)}`;
+    let H=`<p>${T(`関数 $f(x)=${ex}$ について，$${dom}$ の範囲で考える。`)}</p>`;
+    H+=talk([['太郎','グラフ表示ソフトで $y=f(x)$ のグラフと直線 $y=k$ を表示させて，$k$ を動かしながら共有点の個数を数えてみよう。'],['花子','定義域の両はしの点が入るかどうかにも気をつけないとね。']]);
+    H+=`<p class="sub">(1)　${T(`$${dom}$ における $f(x)$ の最大値は`)} ${BX(kA)} ${T('であり，最大値をとる $x$ の個数は')} ${BX(kB)} 個である。</p>`;
+    H+=`<p class="sub">(2)　${T(`方程式 $f(x)=${k1}$ の $${dom}$ における解の個数は`)} ${BX(kC)} 個である。</p>`;
+    H+=`<p class="sub">(3)　${T(`方程式 $f(x)=${k2}$ の $${dom}$ における解の個数は`)} ${BX(kD)} 個である。</p>`;
+    const Tp=2/Bc;
+    const g=graphSVG({w:300,h:150,v:[-0.15*PI,(L+0.2)*PI,Q-A-1,Q+A+1],curves:[{f:fT('sin',A,Bc,-C,Q)}],xt:piLabels(0,L,0.5),xtick:piTicks(0,L,1/12),hl:[k1,k2],vl:[L*PI],yt:[{y:k1,lab:String(k1)},{y:k2,lab:String(k2)}]});
+    const sol=`<p>${T(`$f(x)=${A}\\sin ${Bc===1?'':Bc}\\left(x-${piTex(p)}\\right)${Q?(Q>0?'+':'-')+Math.abs(Q):''}$。周期 $${piTex(Tp)}$，最大値 $${A+Q}$，最小値 $${Q-A}$。`)}</p><div class="figs">${g}</div><p>${T(`グラフと直線 $y=k$ の共有点を $${dom}$ の範囲で数える（両はしをふくむ）。`)}</p><p>${T(`(1) 最大値 $${A+Q}$，個数 $${cm}$　(2) $${c1}$ 個　(3) $${c2}$ 個`)}</p>`;
+    return{title:'方程式の解の個数と最大値',body:H,subs:[{q:1,check:stS('e',[A,Bc,-C,Q],`o=gkd&k=${A+Q}&dt=0&dw=${L}`)},{q:2,check:stS('e',[A,Bc,-C,Q],`o=gkd&k=${k1}&dt=0&dw=${L}`)},{q:3,check:stS('e',[A,Bc,-C,Q],`o=gkd&k=${k2}&dt=0&dw=${L}`)}],sol,meta:{A,Bc,C,p,Q,L,ks:[A+Q,k1,k2],cnt:[cm,c1,c2]}};
+  }
+  throw new Error('s4 failed');
+}
+/* S5: OX combos for operations */
+function tProps(M,m){
+  const f0=s=>s.a*Math.sin(-s.b*s.p*PI)+s.q;
+  return[
+   {t:'周期が $\\pi$ になること',h:s=>Math.abs(Math.abs(s.b)-2)<1e-9,ach:(op,s)=>op==='b',c:'周期 $\\dfrac{2\\pi}{b}=\\pi$ となるのは $b=2$ のときだけ',g:s=>Math.abs(s.b)-2,eq:true},
+   {t:`最大値が $${M}$ になること`,h:s=>Math.abs(s.q+Math.abs(s.a)-M)<1e-9,ach:(op,s)=>op==='q'||(op==='a'&&M-s.q>1e-9),c:`最大値は $q+|a|$`,g:s=>s.q+Math.abs(s.a)-M,eq:true},
+   {t:`最小値が $${m}$ になること`,h:s=>Math.abs(s.q-Math.abs(s.a)-m)<1e-9,ach:(op,s)=>op==='q'||(op==='a'&&s.q-m>1e-9),c:`最小値は $q-|a|$`,g:s=>s.q-Math.abs(s.a)-m,eq:true},
+   {t:'グラフが原点を通ること',h:s=>Math.abs(f0(s))<1e-9,ach:(op,s)=>{const sn=Math.sin(s.b*s.p*PI);if(op==='q')return true;if(op==='a')return Math.abs(sn)>1e-9;if(op==='b')return Math.abs(s.p)>1e-9&&Math.abs(s.q/s.a)<=1+1e-9;return Math.abs(s.q/s.a)<=1+1e-9},c:'$f(0)=-a\\sin bp+q=0$',g:s=>f0(s),eq:true},
+   {t:'$y$ 切片が負になること',h:s=>f0(s)<-1e-9,ach:(op,s)=>{const sn=Math.sin(s.b*s.p*PI);if(op==='q')return true;if(op==='a')return Math.abs(sn)>1e-9;if(op==='b')return Math.abs(s.p)>1e-9&&s.q<Math.abs(s.a)-1e-9;return s.q<Math.abs(s.a)-1e-9},c:'$f(0)=-a\\sin bp+q<0$',g:s=>-f0(s),eq:false},
+  ];
+}
+const OPS5={a:'操作A',b:'操作B',p:'操作P',q:'操作Q'};
+function s5(R,B){
+  for(let tries=0;tries<800;tries++){
+    const S={a:pick(R,[1,2,3,-2]),b:pick(R,[1,2]),p:pick(R,[1/6,1/4,1/3,1/2,2/3,-1/3]),q:pick(R,[1,-1,2,3])};
+    const M=ri(R,-2,5),m=ri(R,-5,2);if(M===S.q+Math.abs(S.a)||m===S.q-Math.abs(S.a))continue;
+    const PR=tProps(M,m);const okp=PR.map((_,i)=>i).filter(i=>!PR[i].h(S));if(okp.length<3)continue;
+    const ps=shuffle(R,okp).slice(0,3);const ops=shuffle(R,['a','b','p','q']).slice(0,2);
+    const res=ops.map(op=>ps.map(pi=>PR[pi].ach(op,S)));
+    if(res.some(r=>r.every(x=>x)||r.every(x=>!x)))continue;
+    const idx=res.map(oxIdx);if(idx[0]===idx[1])continue;
+    const ks=idx.map(i=>B.take(i,1));
+    const co=trigOf('sin',S.a,S.b,S.p,S.q);
+    const g=graphSVG({w:190,h:130,v:[-0.3*PI,2.1*PI,S.q-Math.abs(S.a)-1,S.q+Math.abs(S.a)+1],curves:[{f:x=>fval(co,x)}],xt:piLabels(0.5,2,0.5)});
+    const fig=softFig('v',[{n:'a',val:fx(S.a),pos:62},{n:'b',val:fx(S.b),pos:40},{n:'p',val:piTxt(S.p),pos:55},{n:'q',val:fx(S.q),pos:66}],g).replace('y=a(x−p)²+q','y=a sin b(x−p)+q');
+    let H=`<p>${T('関数 $f(x)=a\\sin b(x-p)+q$ のグラフをコンピュータのグラフ表示ソフトを用いて表示させる。このソフトでは $a$，$b$，$p$，$q$ の値を入力すると，その値に応じたグラフが表示される。最初に，図1のように値を入力した。この状態を [状態X] とする。')}</p>`;
+    H+=`<div class="figs"><div>${fig}<div class="figcap">図1</div></div></div>`;
+    H+=`<div class="ops">${['a','b','p','q'].map(op=>`<div>${OPS5[op]}：${T(`[状態X] から $${op}$ の値だけを変化させる。`)}${op==='a'?T('ただし $a\\neq0$ とする。'):op==='b'?T('ただし $b>0$ とする。'):''}</div>`).join('')}</div>`;
+    H+=`<p>次の (i)〜(iii) のことが起こり得るかどうかを調べる。起こり得るときは○，起こり得ないときは×で表す。</p><div class="ops">${ps.map((pi,j)=>`<div>(${['i','ii','iii'][j]})　${T(PR[pi].t)}</div>`).join('')}</div>`;
+    H+=ops.map((op,j)=>`<p class="sub">(${j+1})　${OPS5[op]}を行うとき，(i)，(ii)，(iii) の○，×の組合せとして正しいものは ${BX(ks[j])} である。</p>`).join('');
+    H+=`<p>${BX(ks[0])}，${BX(ks[1])} に当てはまるものを，次の⓪〜⑦のうちから一つずつ選べ。ただし，同じものを繰り返し選んでもよい。</p>`+optsBox(OXCH.map(s=>`(i)：${s[0]}　(ii)：${s[1]}　(iii)：${s[2]}`));
+    const sol=`<p>${T(`[状態X] は $a=${S.a},\\ b=${S.b},\\ p=${piTex(S.p)},\\ q=${S.q}$。最大値 $${S.q+Math.abs(S.a)}$，最小値 $${S.q-Math.abs(S.a)}$，$f(0)=${fx(fval(co,0))}$。`)}</p>`+ps.map((pi,j)=>`<p>(${['i','ii','iii'][j]}) ${T(PR[pi].c)}</p>`).join('')+ops.map((op,j)=>`<h4>${ks[j]}（${OPS5[op]}）</h4><p>${res[j].map((x,i)=>`(${['i','ii','iii'][i]}) ${x?'○':'×'}`).join('　')}　よって ${CIR[idx[j]]}</p>`).join('');
+    return{title:'○×の組合せ',body:H,subs:[{q:1,check:stS('s',[S.a,S.b,S.p,S.q],'o=g')}],sol,meta:{S,M,m,ps,ops,ans:idx}};
+  }
+  throw new Error('s5 failed');
+}
 const GENS={1:g1,2:g2,3:g3,4:g4,5:g5,6:g6};
-function gen(type,seed){
-  const R=rngOf(seed*7919+type*104729);const B=mkB();const p=GENS[type](R,B);
-  p.id=`Q${type}-${seed}`;p.type=type;p.seed=seed;p.blanks=B.list;p.groups=B.groups;return p;
+const GENS_S={1:s1,2:s2,3:s3,4:s4,5:s5};
+const FNNAME={quad:'2次関数',trig:'三角関数'},PFX={quad:'Q',trig:'S'};
+function gen(a1,a2,a3){
+  let fnKey='quad',type,seed;if(typeof a1==='string'){fnKey=a1;type=a2;seed=a3}else{type=a1;seed=a2}
+  const R=rngOf(seed*7919+type*104729+(fnKey==='trig'?77777:0));const B=mkB();const p=(fnKey==='trig'?GENS_S:GENS)[type](R,B);
+  p.id=`${PFX[fnKey]}${type}-${seed}`;p.fnKey=fnKey;p.fnName=FNNAME[fnKey];p.type=type;p.seed=seed;p.blanks=B.list;p.groups=B.groups;return p;
 }
 /* ---------- exercise view ---------- */
 const EX={cur:null,marks:{},scored:false};
-function parseId(s){const m=/^\s*Q?([1-6])-(\d{1,6})\s*$/i.exec(s||'');return m?{t:+m[1],s:+m[2]}:null}
+function parseId(s){const m=/^\s*([QS]?)([1-6])-(\d{1,6})\s*$/i.exec(s||'');if(!m)return null;const f=m[1].toUpperCase()==='S'?'trig':'quad';if(f==='trig'&&+m[2]>5)return null;return{f,t:+m[2],s:+m[3]}}
 function qrSVG(url){try{const q=qrcode(0,'M');q.addData(url);q.make();return q.createSvgTag(2,0)}catch(e){return ''}}
 function paperHTML(p,withQR){
   const exURL=PUBLIC_URL+'?ex='+p.id,chkURL=PUBLIC_URL+'?'+p.subs[0].check;
-  let h=`<div class="paper"><div class="phead"><div class="pt"><b>グラフ考察　2次関数　${p.title}</b><div class="pid">問題番号 ${p.id}　／　グラフ考察 共通テスト対策 v${VERSION}</div><div class="name">組　　番　名前 <span></span></div></div>`;
+  let h=`<div class="paper"><div class="phead"><div class="pt"><b>グラフ考察　${p.fnName}　${p.title}</b><div class="pid">問題番号 ${p.id}　／　グラフ考察 共通テスト対策 v${VERSION}</div><div class="name">組　　番　名前 <span></span></div></div>`;
   if(withQR)h+=`<div class="qrs"><div class="qr">${qrSVG(exURL)}マーク・採点</div><div class="qr">${qrSVG(chkURL)}アプリで確かめる</div></div>`;
   h+=`</div><div><b>第1問</b></div>${p.body}</div>`;
   return h;
@@ -845,16 +1195,25 @@ function solHTML(p){
   const grp=p.groups.length?`<p class="mini">順不同：${p.groups.map(g=>g.join('，')).join('　')}</p>`:'';
   return `<div class="paper"><div class="phead"><div class="pt"><b>解答・解説　${p.title}</b><div class="pid">問題番号 ${p.id}</div></div></div><p><b>正解</b>　${ans.join('　')}</p>${grp}${p.sol}</div>`;
 }
-function openEx(type,seed){
-  let p;try{p=gen(type,seed)}catch(e){alert('この番号の問題は作れませんでした。');return}
+function openEx(fnKey,type,seed){
+  if(fnKey!==FN)setFn(fnKey,true);
+  let p;try{p=gen(fnKey,type,seed)}catch(e){alert('この番号の問題は作れませんでした。');return}
   EX.cur=p;EX.marks={};EX.scored=false;$('#exType').value=String(type);$('#exId').value=p.id;
   $('#paper').innerHTML=paperHTML(p,true);renderMarks();
 }
-function newEx(){const t=+$('#exType').value||1;openEx(t,1000+Math.floor(Math.random()*9000))}
+function newEx(){const t=+$('#exType').value||1;openEx(FN,t,1000+Math.floor(Math.random()*9000))}
 $('#exNew').onclick=newEx;
-$('#exOpen').onclick=()=>{const r=parseId($('#exId').value);if(!r){alert('問題番号は「Q1-4831」のように入力してください。');return}openEx(r.t,r.s)};
+$('#exOpen').onclick=()=>{const r=parseId($('#exId').value);if(!r){alert('問題番号は「Q1-4831」のように入力してください。');return}openEx(r.f,r.t,r.s)};
 $('#exPrint').onclick=()=>{if(!EX.cur)return;$('#printArea').innerHTML=paperHTML(EX.cur,true);window.print()};
 $('#exPrintA').onclick=()=>{if(!EX.cur)return;$('#printArea').innerHTML=solHTML(EX.cur);window.print()};
+/* all types at once: one page per type; the same set is used for the answers */
+function newBatch(){const n=TYPES[FN].length;EX.batch={fn:FN,list:[]};for(let t=1;t<=n;t++){try{EX.batch.list.push(gen(FN,t,1000+Math.floor(Math.random()*9000)))}catch(e){}}showBatch()}
+function showBatch(){$('#allIds').textContent=EX.batch&&EX.batch.fn===FN?'今の組：'+EX.batch.list.map(p=>p.id).join('，'):''}
+function batchReady(){if(!EX.batch||EX.batch.fn!==FN)newBatch();return EX.batch.list}
+const joinPages=arr=>arr.map((h,i)=>`<div class="${i?'pbreak':''}">${h}</div>`).join('');
+$('#allNew').onclick=newBatch;
+$('#allPrint').onclick=()=>{const L=batchReady();$('#printArea').innerHTML=joinPages(L.map(p=>paperHTML(p,true)));window.print()};
+$('#allPrintA').onclick=()=>{const L=batchReady();$('#printArea').innerHTML=joinPages(L.map(p=>solHTML(p)));window.print()};
 function blankChoices(p,b){
   // answer is a choice number when the blank's answer box is a single kana used as choice; detect by meta: digits shown always
   return ['-','0','1','2','3','4','5','6','7','8','9'];
@@ -895,15 +1254,46 @@ function scoreEx(p,marks){
 /* ---------- URL state ---------- */
 function applyQuery(U){
   const s=U.get('st');
-  if(s){const a=s.split(',');const f=a[0];if(KEYS[f]&&a.length===KEYS[f].length+1){loadVals(f,a.slice(1).map(Number))}}
-  const o=U.get('o')||'';O.ghost=o.includes('g')||!U.get('o');O.trail=o.includes('t');O.pos=o.includes('s');O.k=o.includes('k');O.dom=o.includes('d');
+  if(s){const a=s.split(',');const f=a[0];if(KEYS[f]&&a.length===KEYS[f].length+1){const tf=(f==='s'||f==='e')?'trig':'quad';if(tf!==FN)setFn(tf,true);loadVals(f,a.slice(1).map(Number));for(const k of KEYS[f])if(ANG[k]){const v=P[f][k]*24;if(Math.abs(v-Math.round(v))<0.05)P[f][k]=Math.round(v)/24}buildFormSeg()}}
+  if(U.get('fn'))P.fn=U.get('fn')==='cos'?'cos':'sin';
+  const o=U.get('o')||'';O.ghost=o.includes('g')||!U.get('o');O.trail=o.includes('t');O.pos=o.includes('s');O.k=o.includes('k');O.dom=o.includes('d');O.base=o.includes('b');if(U.get('dt'))O.dt=+U.get('dt');if(U.get('dw'))O.dw=+U.get('dw');
   if(U.get('k'))O.kv=+U.get('k');
   ghost=null;trail=[];lock={};syncOptUI();buildParams();
-  const co=coef();if(!co.err){const v=vertexOf(co);if(v){G.cx=Math.max(-6,Math.min(6,Math.round(v.x/2)));G.cy=Math.max(-6,Math.min(6,Math.round(v.y/2)))}}
+  homeView();const co=coef();if(!co.err&&!co.trig){const v=vertexOf(co);if(v){G.cx=Math.max(-6,Math.min(6,Math.round(v.x/2)));G.cy=Math.max(-6,Math.min(6,Math.round(v.y/2)))}}
   afterChange();
 }
 /* ---------- self test ---------- */
-function selfTest(n=150){
+function selfTest(n=150){const a=selfTestQ(n),b=selfTestS(n);return{text:'【2次関数】\n'+a.text+'\n【三角関数】\n'+b.text,bad:a.bad+b.bad}}
+function selfTestS(n=150){
+  const out=[];let bad=0;const near=(x,y)=>Math.abs(x-y)<1e-6;
+  for(let t=1;t<=5;t++){
+    let ok=0;const errs=[];
+    for(let s=1;s<=n;s++){
+      try{
+        const p=gen('trig',t,s),q=gen('trig',t,s);
+        if(JSON.stringify(p.blanks)!==JSON.stringify(q.blanks)||p.body!==q.body.replace(/cl\d+/g,m=>m)&&false)throw 'not deterministic';
+        if(!p.blanks.length||p.blanks.some(b=>!/^[-0-9]$/.test(b.a)))throw 'bad blank';
+        const m=p.meta,A=p.blanks.map(b=>b.a).join('');
+        if(t===1){const tgt=x=>m.a*Math.sin(m.b*(x-m.p*PI));const c=m.opts.map((e,i)=>{let ok2=true;for(let j=0;j<97;j++){const x=-5+j*0.113;if(Math.abs(m.a*0+e[1]*(e[0]==='cos'?Math.cos(e[2]*x+e[3]*PI):Math.sin(e[2]*x+e[3]*PI))-tgt(x))>1e-6){ok2=false;break}}return ok2?i:-1}).filter(i=>i>=0);
+          if(c.join()!==m.corr.join())throw 'correct set';if(A!==m.corr.join(''))throw 'blank1';if(new Set(m.opts.map(e=>trigExprTex(...e))).size!==6)throw 'dup disp'}
+        if(t===2){const v=k=>m.L.find(i=>i.k===k).v,an=m.ans;const val=i=>m.L[i].v;
+          const s1=val(an.iB),h=val(an.p),kk=val(an.A),vv=val(an.Q),h2=val(an.C);
+          for(const x of[-2,-0.7,0.3,1.9,4]){const tg=m.A*Math.sin(m.Bc*x-m.C*PI)+m.Q;const g1=kk*Math.sin((x-h)/s1)+vv;const g2=kk*Math.sin(x/s1-h2)+vv;if(!near(tg,g1))throw 'taro';if(!near(tg,g2))throw 'hanako'}
+          if(!near(an.n/an.d,m.p))throw 'frac';}
+        if(t===3){const co=trigOf('sin',m.A,m.Bc,m.p,0);const fm=firstMax(co);if(!near(fm.x/PI,m.xm))throw 'first max';let cnt=0;for(let x=fm.x;x<2*PI-1e-9;x+=2*PI/m.Bc)cnt++;if(String(cnt)!==p.blanks[1].a)throw 'max count';
+          const tg=fT('sin',m.A,m.Bc,-m.C);if(!eqFn(tg,x=>fval(co,x)))throw 'form'}
+        if(t===4){const co=trigOf('sin',m.A,m.Bc,m.p,m.Q);const L=m.L*PI;m.ks.forEach((k,i)=>{const r=rootsK(co,k,0,L+1e-7);if(r.length!==m.cnt[i])throw 'count '+i+': '+r.length+' vs '+m.cnt[i]});if(m.A+m.Q!==m.ks[0])throw 'max'}
+        if(t===5){const S=m.S;const PR=tProps(m.M,m.m);
+          const grid={a:[],b:[],p:[],q:[]};for(let i=-2000;i<=2000;i++){if(i)grid.a.push(i/100);grid.q.push(i/100)}for(let i=1;i<=2000;i++)grid.b.push(i/200);for(let i=-1600;i<=1600;i++)grid.p.push(i/400);
+          m.ops.forEach((op,j)=>{const r=m.ps.map(pi=>{const pr=PR[pi];let prev=null;for(const v of grid[op]){const s2={...S,[op]:v};const g=pr.g(s2);if(pr.eq){if(Math.abs(g)<1e-9)return true;if(prev!==null&&prev*g<0)return true;prev=g}else if(g>1e-9)return true}return false});if(oxIdx(r)!==m.ans[j])throw 'ox '+op+' '+r.join()})}
+        ok++;
+      }catch(e){bad++;if(errs.length<3)errs.push(`seed ${s}: ${e}`)}
+    }
+    out.push(`型${t}: ${ok}/${n} 合格`+(errs.length?'  '+errs.join(' / '):''));
+  }
+  return{text:out.join('\n'),bad};
+}
+function selfTestQ(n=150){
   const out=[];let bad=0;
   const near=(x,y)=>Math.abs(x-y)<1e-6;
   for(let t=1;t<=6;t++){
@@ -948,7 +1338,8 @@ window.addEventListener('resize',()=>{if(mode!=='ex')resize()});
 setStep(0.1);buildParams();
 (function boot(){
   const U=new URLSearchParams(location.search);
-  if(U.get('ex')){const r=parseId(U.get('ex'));setMode('ex');if(r)openEx(r.t,r.s);return}
+  setFn('quad',true);
+  if(U.get('ex')){const r=parseId(U.get('ex'));if(r)setFn(r.f,true);setMode('ex');if(r)openEx(r.f,r.t,r.s);return}
   if(U.get('st'))applyQuery(U);
   const m=U.get('m');setMode(['pred','mis'].includes(m)?m:'obs');
 })();
