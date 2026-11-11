@@ -116,7 +116,7 @@ select,input.txt{padding:6px 8px;border:1px solid var(--line);border-radius:6px;
 .soft .srow{display:flex;align-items:center;gap:4px;margin-top:3px}
 .soft .sbox{display:inline-block;min-width:34px;height:16px;border:1px solid #000;text-align:center;line-height:15px;font-size:11px}
 .soft .sl{position:relative;height:8px;border-bottom:1px solid #000;margin:2px 2px 4px}
-.soft .sl i{position:absolute;bottom:-4px;width:8px;height:8px;border-radius:50%;background:#000;margin-left:-4px}
+.soft .sl i{position:absolute;bottom:-4px;width:0;height:0;border:4px solid #000;border-radius:50%;margin-left:-4px;-webkit-print-color-adjust:exact;print-color-adjust:exact}
 .gsvg{overflow:visible}
 .gsvg .ax{stroke:#000;stroke-width:1}
 .gsvg .cv{stroke:#000;stroke-width:1.8;fill:none}
@@ -239,7 +239,7 @@ dialog::backdrop{background:rgba(0,0,0,.35)}
 </dialog>
 <script>
 'use strict';
-const VERSION='0.8.0';
+const VERSION='0.8.1';
 const PUBLIC_URL='https://sdanno75-spec.github.io/graph/';
 const KANA='アイウエオカキクケコサシスセソタチツテトナニヌネノハヒフヘホマミムメモ';
 const CIR='⓪①②③④⑤⑥⑦⑧⑨';
